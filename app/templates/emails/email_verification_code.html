@@ -1,0 +1,18 @@
+{% extends "emails/_base.html" %}
+
+{% block body %}
+
+<h1>Email Verification</h1>
+
+<p>Hi {{ names }},</p>
+
+<p>Your verification code is:</p>
+
+<p style="font-size: 28px; letter-spacing: 3px; font-weight: bold;">
+  {{ code }}
+</p>
+
+<p>This code expires shortly.  
+Please never share it with anyone.</p>
+
+{% endblock %}

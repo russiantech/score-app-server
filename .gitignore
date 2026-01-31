@@ -1,0 +1,63 @@
+# =========================
+# Virtual Environments
+# =========================
+env/
+venv/
+.venv/
+*.env
+.env.*
+*.local
+*.development
+*.production
+
+# =========================
+# Python
+# =========================
+__pycache__/
+*.pyc
+
+# Ignore Python files ending with _<number>
+*_[0-9]*.py
+
+# =========================
+# Node / JavaScript
+# =========================
+node_modules/
+dist/
+dist-ssr/
+build/
+
+# Ignore TSX and JSON files ending with _<number>
+*_[0-9]*.tsx
+*_[0-9]*.json
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# =========================
+# Editor & OS Files
+# =========================
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# =========================
+# Backup Files
+# =========================
+*.bak
+*.BAK
+*~
+*.tmp

@@ -1,0 +1,11 @@
+Hi {{ names }},
+
+Your verification code is:
+
+{{ code }}
+
+This code will expire shortly.
+Please do not share it with anyone.
+
+— Dunistech Academy
+If you did not request this code, please ignore this email.

@@ -1,0 +1,21 @@
+{% extends "emails/_base.html" %}
+
+{% block content %}
+<h2>Welcome, {{ names }}</h2>
+
+<p>
+Welcome to <strong>{{ app_name }}</strong>. Your account has been successfully created.
+</p>
+
+<p>
+This platform provides real-time score tracking and performance insights, helping you stay informed about your ward’s academic progress.
+</p>
+
+<p>
+You may now explore courses, monitor progress, and get started right away.
+</p>
+
+<p>
+For assistance, our support team is always available.
+</p>
+{% endblock %}
