@@ -20,12 +20,30 @@ app_config = get_app_config()
 
 LOG_LEVEL = logging.DEBUG if app_config.general_config.development_mode else logging.INFO
 
+# logging.basicConfig(
+#     level=LOG_LEVEL,
+#     format="%(asctime)s | %(levelname)-8s | %(name)s | %(message)s",
+#     datefmt="%Y-%m-%d %H:%M:%S",
+#     handlers=[logging.StreamHandler(sys.stdout)]
+# )
+
 logging.basicConfig(
     level=LOG_LEVEL,
     format="%(asctime)s | %(levelname)-8s | %(name)s | %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S",
-    handlers=[logging.StreamHandler(sys.stdout)]
+    handlers=[
+        logging.FileHandler("app.log"),
+    ],
 )
+
+""" 
+Optional (better): also silence uvicorn logs under Passenger
+Because Passenger is serving — not uvicorn — so uvicorn logs are useless here.
+"""
+logging.getLogger("uvicorn").handlers = []
+logging.getLogger("uvicorn.error").handlers = []
+logging.getLogger("uvicorn.access").handlers = []
+
 
 logger = logging.getLogger(__name__)
 
