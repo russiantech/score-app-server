@@ -107,8 +107,14 @@ setup_exception_handlers(app, app_config)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"] if app_config.general_config.development_mode
-    else ["https://dunistech.ng", "https://www.dunistech.ng"],
+    allow_origins=["*"] 
+    if app_config.general_config.development_mode
+    else [
+        "https://studentscores.simplylovely.ng",
+        "https://dunistech.ng",
+        "https://www.dunistech.ng",
+    ],
+    
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
