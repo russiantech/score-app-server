@@ -46,43 +46,43 @@ logger = logging.getLogger(__name__)
 #     # app.add_exception_handler(JoseError, handler.authlib_jwt_exception_handler)
 #     app.add_exception_handler(IntegrityError, handler.integrity_error_handler)
     
-#     logger.info("✅ Exception handlers registered successfully")
+#     logger.info(" Exception handlers registered successfully")
 
 # v2 - correct order
 def setup_exception_handlers(app: FastAPI, config):
     handler = ExceptionHandler(config)
 
-    # 1️⃣ Custom domain exceptions
+    # 1 Custom domain exceptions
     app.add_exception_handler(
         CustomAPIException,
         handler.custom_api_exception_handler
     )
 
-    # 2️⃣ Request validation (Pydantic, JSON parsing, body errors)
+    # 2 Request validation (Pydantic, JSON parsing, body errors)
     app.add_exception_handler(
         RequestValidationError,
         handler.validation_exception_handler
     )
 
-    # 3️⃣ HTTP errors (404, 405, etc.)
+    # 3 HTTP errors (404, 405, etc.)
     app.add_exception_handler(
         StarletteHTTPException,
         handler.http_exception_handler
     )
 
-    # 4️⃣ Database integrity errors
+    # 4 Database integrity errors
     app.add_exception_handler(
         IntegrityError,
         handler.integrity_error_handler
     )
 
-    # 5️⃣ LAST RESORT — unknown errors
+    # 5 LAST RESORT — unknown errors
     app.add_exception_handler(
         Exception,
         handler.global_exception_handler
     )
 
-    logger.info("✅ Exception handlers registered successfully")
+    logger.info("Exception handlers registered successfully")
 
 # Import for easy access
 from .custom_exceptions import (

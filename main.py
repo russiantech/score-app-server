@@ -12,7 +12,6 @@ from app.core.exceptions import setup_exception_handlers
 from app.api.v1.router import v1_router
 from app.api.root import root_router
 
-
 # ------------------------------------------------------------------
 # GLOBAL LOGGING CONFIG (MUST COME FIRST)
 # ------------------------------------------------------------------
@@ -37,9 +36,9 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    logger.info("🚀 Starting Dunistech Academy API...")
+    logger.info("Starting Dunistech Academy API...")
     yield
-    logger.info("🛑 Shutdown complete")
+    logger.info("Shutdown complete")
 
 
 # ------------------------------------------------------------------
@@ -80,7 +79,7 @@ def custom_openapi():
         routes=app.routes,
     )
 
-    # 🔒 Add refresh token security definition
+    # Add refresh token security definition
     openapi_schema["components"]["securitySchemes"]["RefreshToken"] = {
         "type": "apiKey",
         "in": "header",
