@@ -1,0 +1,20 @@
+# Disable Passenger - we're running uvicorn directly
+PassengerEnabled off
+
+# Enable rewrite engine
+RewriteEngine On
+
+# Force HTTPS
+RewriteCond %{HTTPS} !=on
+RewriteRule ^(.*)$ https://%{HTTP_HOST}/$1 [R=301,L]
+
+# Proxy all requests to local uvicorn on port 8001
+RewriteCond %{REQUEST_URI} !^/\.well-known/
+RewriteRule ^(.*)$ http://127.0.0.1:8001/$1 [P,L]
+
+# Preserve important headers
+<IfModule mod_headers.c>
+    RequestHeader set X-Forwarded-Proto "https"
+    RequestHeader set X-Forwarded-For "%{REMOTE_ADDR}e"
+    RequestHeader set X-Real-IP "%{REMOTE_ADDR}e"
+</IfModule>

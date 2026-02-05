@@ -1,3 +1,5 @@
+# app/core/exceptions/__init__.py
+
 from fastapi import FastAPI
 from psycopg2 import IntegrityError
 
