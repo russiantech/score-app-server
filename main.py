@@ -24,38 +24,57 @@ logging.basicConfig(
     level=LOG_LEVEL,
     format="%(asctime)s | %(levelname)-8s | %(name)s | %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S",
-    handlers=[logging.StreamHandler(sys.stdout)]
+    handlers=[logging.FileHandler("app.log")]  # ✅ CHANGED: Use FileHandler for production
 )
 
-# logging.basicConfig(
-#     level=LOG_LEVEL,
-#     format="%(asctime)s | %(levelname)-8s | %(name)s | %(message)s",
-#     datefmt="%Y-%m-%d %H:%M:%S",
-#     handlers=[
-#         logging.FileHandler("app.log"),
-#     ],
-# )
-
-""" 
-Optional (better): also silence uvicorn logs under Passenger
-Because Passenger is serving — not uvicorn — so uvicorn logs are useless here.
-"""
-# logging.getLogger("uvicorn").handlers = []
-# logging.getLogger("uvicorn.error").handlers = []
-# logging.getLogger("uvicorn.access").handlers = []
-
+# Silence uvicorn logs (optional, but cleaner for production)
+logging.getLogger("uvicorn").handlers = []
+logging.getLogger("uvicorn.error").handlers = []
+logging.getLogger("uvicorn.access").handlers = []
 
 logger = logging.getLogger(__name__)
 
 
 # ------------------------------------------------------------------
-# LIFESPAN
+# LIFESPAN WITH REDIS MANAGEMENT
 # ------------------------------------------------------------------
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    """
+    Application lifespan context manager.
+    Handles startup and shutdown tasks including Redis connection management.
+    """
+    # ============================================================
+    # STARTUP
+    # ============================================================
     logger.info("Starting Dunistech Academy API...")
+    
+    # Initialize Redis connection pool
+    try:
+        from app.api.deps.storage import init_redis_on_startup
+        init_redis_on_startup()
+        logger.info("✅ Redis initialization complete")
+    except Exception as e:
+        logger.error(f"⚠️  Redis startup failed: {e}")
+        logger.info("App will continue - Redis will auto-connect on first use")
+    
+    # App is ready
     yield
+    
+    # ============================================================
+    # SHUTDOWN
+    # ============================================================
+    logger.info("Shutting down gracefully...")
+    
+    # Close Redis connection pool
+    try:
+        from app.api.deps.storage import close_redis
+        close_redis()
+        logger.info("✅ Redis connections closed")
+    except Exception as e:
+        logger.error(f"⚠️  Error during Redis shutdown: {e}")
+    
     logger.info("Shutdown complete")
 
 
@@ -74,18 +93,13 @@ app = FastAPI(
 )
 
 
-# @app.on_event("startup")
-# async def startup_event():
-#     for route in app.routes:
-#         print(f"{route.methods} {route.path}")
-
 # ------------------------------------------------------------------ 
 # OPENAPI CUSTOMIZATION
 # ------------------------------------------------------------------
-# from fastapi.openapi.models import APIKey, APIKeyIn, SecuritySchemeType
 from fastapi.openapi.utils import get_openapi
-# Add custom OpenAPI security scheme
+
 app.openapi_schema = None
+
 def custom_openapi():
     if app.openapi_schema:
         return app.openapi_schema
@@ -156,13 +170,13 @@ app.include_router(v1_router)
 
 if __name__ == "__main__":
     port = int(os.getenv("PORT", app_config.hosting_config.port))
-    host = os.getenv("HOST", "127.0.0.1")  # <-- use localhost
+    host = os.getenv("HOST", "127.0.0.1")
     uvicorn.run(
-        'main:app',  # <-- pass the app object directly
+        'main:app',
         host=host,
         port=port,
         reload=app_config.general_config.development_mode,
         access_log=True,
         log_level="debug" if app_config.general_config.development_mode else "info",
-        workers=1 if not app_config.general_config.development_mode else None,  # optional, remove for dev
+        workers=1 if not app_config.general_config.development_mode else None,
     )
