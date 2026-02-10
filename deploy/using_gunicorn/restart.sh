@@ -1,5 +1,5 @@
 #!/bin/bash
-# restart.sh - Restart the FastAPI app / Dunistech Scoring System
+# restart.sh - Restart the FastAPI app
 
 cd "$(dirname "$0")"
 

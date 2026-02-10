@@ -22,4 +22,3 @@ tail -f app.log 2>/dev/null | while read line; do
         echo "$line"
     fi
 done
-

@@ -1,0 +1,13 @@
+# DO NOT REMOVE. CLOUDLINUX PASSENGER CONFIGURATION BEGIN
+PassengerAppRoot "/home/simpdinr/api-studentscores.simplylovely.ng"
+PassengerBaseURI "/"
+PassengerPython "/home/simpdinr/virtualenv/api-studentscores.simplylovely.ng/3.13/bin/python"
+PassengerStartupFile passenger_wsgi.py
+PassengerAppType wsgi
+PassengerEnabled on
+# DO NOT REMOVE. CLOUDLINUX PASSENGER CONFIGURATION END
+
+# Force HTTPS
+RewriteEngine On
+RewriteCond %{HTTPS} !=on
+RewriteRule ^(.*)$ https://%{HTTP_HOST}/$1 [R=301,L]

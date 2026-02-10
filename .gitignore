@@ -19,6 +19,11 @@ __pycache__/
 # Ignore Python files ending with _<number>
 *_[0-9]*.py
 
+# ignore files in the _
+# directory, which is used for temporary files in some Python projects
+_/
+_
+
 # =========================
 # Node / JavaScript
 # =========================

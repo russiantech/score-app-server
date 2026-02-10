@@ -128,6 +128,8 @@ app.add_middleware(
     if app_config.general_config.development_mode
     else [
         "https://studentscores.simplylovely.ng",
+        "https://www.studentscores.simplylovely.ng",
+        "https://studentscores.vercel.app",
         "https://dunistech.ng",
         "https://www.dunistech.ng",
     ],
