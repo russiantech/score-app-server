@@ -23,6 +23,7 @@ __pycache__/
 # directory, which is used for temporary files in some Python projects
 _/
 _
+.htaccess
 
 # =========================
 # Node / JavaScript
