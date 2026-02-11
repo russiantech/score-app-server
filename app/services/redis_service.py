@@ -32,92 +32,138 @@ class RedisService:
         if connection_string:
             self._initialize_connection(connection_string)
 
-    def _initialize_connection_0(self, connection_string: str):
-        """Parse connection string and create Upstash-compatible connection pool"""
+    # def _initialize_connection_0(self, connection_string: str):
+    #     """Parse connection string and create Upstash-compatible connection pool"""
+    #     try:
+    #         parsed = urlparse(connection_string)
+    #         host = parsed.hostname or 'localhost'
+    #         port = parsed.port or 6379
+    #         db = int(parsed.path.lstrip('/')) if parsed.path else 0
+    #         password = parsed.password
+    #         username = parsed.username
+            
+    #         # Determine if SSL
+    #         use_ssl = parsed.scheme == 'rediss'
+
+    #         # CRITICAL: Upstash-specific connection pool settings
+    #         self.pool = ConnectionPool(
+    #             host=host,
+    #             port=port,
+    #             db=db,
+    #             password=password,
+    #             username=username,
+                
+    #             # Connection pool size (conservative for shared hosting)
+    #             max_connections=10,
+                
+    #             # Decoding
+    #             decode_responses=True,
+                
+    #             # Timeouts (CRITICAL for Upstash)
+    #             socket_timeout=5,          # 5s read/write timeout
+    #             socket_connect_timeout=5,  # 5s to establish connection
+                
+    #             # TCP Keepalive (CRITICAL - prevents Upstash from closing idle connections)
+    #             socket_keepalive=True,
+    #             socket_keepalive_options={
+    #                 1: 30,   # TCP_KEEPIDLE: start keepalive after 30s idle
+    #                 2: 10,   # TCP_KEEPINTVL: send keepalive probe every 10s
+    #                 3: 3,    # TCP_KEEPCNT: close after 3 failed probes
+    #             },
+                
+    #             # Auto-retry on failures
+    #             retry_on_timeout=True,
+    #             retry_on_error=[RedisConnectionError],
+                
+    #             # Health checks (CRITICAL - detects stale connections)
+    #             health_check_interval=30,  # Check connection health every 30s
+                
+    #             # SSL settings
+    #             connection_class=None,  # Let redis-py auto-detect
+    #             ssl=use_ssl,
+    #             ssl_cert_reqs='required' if use_ssl else None,
+    #         )
+
+    #         self.client = Redis(connection_pool=self.pool)
+            
+    #         # Verify connection
+    #         self.client.ping()
+    #         logger.info(f" Redis connected to {host}:{port}/{db} (SSL: {use_ssl})")
+            
+    #     except Exception as e:
+    #         logger.error(f"  Failed to initialize Redis: {e}")
+    #         raise
+
+    # def _initialize_connection(self, connection_string: str):
+    #     try:
+    #         self.client = Redis.from_url(
+    #             connection_string,
+    #             decode_responses=True,
+    #             max_connections=10,
+    #             socket_timeout=5,
+    #             socket_connect_timeout=5,
+    #             retry_on_timeout=True,
+    #             health_check_interval=30,
+    #         )
+
+    #         # verify
+    #         self.client.ping()
+
+    #         parsed = urlparse(connection_string)
+    #         logger.info(
+    #             f"Redis connected to {parsed.hostname}:{parsed.port} "
+    #             f"(SSL: {parsed.scheme == 'rediss'})"
+    #         )
+
+    #     except Exception as e:
+    #         logger.error(f"Redis init failed: {e}")
+    #         raise
+
+    def _initialize_connection(self, connection_string: str):
+        """Initialize Redis from connection string with Upstash optimizations"""
         try:
             parsed = urlparse(connection_string)
-            host = parsed.hostname or 'localhost'
-            port = parsed.port or 6379
-            db = int(parsed.path.lstrip('/')) if parsed.path else 0
-            password = parsed.password
-            username = parsed.username
             
-            # Determine if SSL
-            use_ssl = parsed.scheme == 'rediss'
-
-            # CRITICAL: Upstash-specific connection pool settings
-            self.pool = ConnectionPool(
-                host=host,
-                port=port,
-                db=db,
-                password=password,
-                username=username,
-                
-                # Connection pool size (conservative for shared hosting)
+            # Create connection pool with health checks and keepalive
+            self.pool = ConnectionPool.from_url(
+                connection_string,
+                decode_responses=True,
                 max_connections=10,
                 
-                # Decoding
-                decode_responses=True,
-                
-                # Timeouts (CRITICAL for Upstash)
-                socket_timeout=5,          # 5s read/write timeout
-                socket_connect_timeout=5,  # 5s to establish connection
-                
-                # TCP Keepalive (CRITICAL - prevents Upstash from closing idle connections)
+                # Timeouts
+                socket_timeout=5,
+                socket_connect_timeout=5,
                 socket_keepalive=True,
                 socket_keepalive_options={
-                    1: 30,   # TCP_KEEPIDLE: start keepalive after 30s idle
-                    2: 10,   # TCP_KEEPINTVL: send keepalive probe every 10s
-                    3: 3,    # TCP_KEEPCNT: close after 3 failed probes
+                    1: 1,   # TCP_KEEPIDLE
+                    2: 1,   # TCP_KEEPINTVL  
+                    3: 3,   # TCP_KEEPCNT
                 },
                 
-                # Auto-retry on failures
+                # CRITICAL: Health checks to detect stale connections
+                health_check_interval=30,
+                
+                # Retry on connection errors
                 retry_on_timeout=True,
                 retry_on_error=[RedisConnectionError],
                 
-                # Health checks (CRITICAL - detects stale connections)
-                health_check_interval=30,  # Check connection health every 30s
-                
                 # SSL settings
-                connection_class=None,  # Let redis-py auto-detect
-                ssl=use_ssl,
-                ssl_cert_reqs='required' if use_ssl else None,
+                ssl_cert_reqs=None if parsed.scheme == 'rediss' else None,
             )
-
+            
             self.client = Redis(connection_pool=self.pool)
             
             # Verify connection
             self.client.ping()
-            logger.info(f" Redis connected to {host}:{port}/{db} (SSL: {use_ssl})")
-            
-        except Exception as e:
-            logger.error(f"  Failed to initialize Redis: {e}")
-            raise
-
-    def _initialize_connection(self, connection_string: str):
-        try:
-            self.client = Redis.from_url(
-                connection_string,
-                decode_responses=True,
-                max_connections=10,
-                socket_timeout=5,
-                socket_connect_timeout=5,
-                retry_on_timeout=True,
-                health_check_interval=30,
-            )
-
-            # verify
-            self.client.ping()
-
-            parsed = urlparse(connection_string)
             logger.info(
-                f"Redis connected to {parsed.hostname}:{parsed.port} "
+                f"✓ Redis connected to {parsed.hostname}:{parsed.port} "
                 f"(SSL: {parsed.scheme == 'rediss'})"
             )
-
+            
         except Exception as e:
-            logger.error(f"Redis init failed: {e}")
+            logger.error(f"✗ Redis init failed: {e}")
             raise
+    
 
     def _get_healthy_client(self) -> Redis:
         """
