@@ -119,36 +119,79 @@ class RedisService:
     #         logger.error(f"Redis init failed: {e}")
     #         raise
 
+    # def _initialize_connection(self, connection_string: str):
+    #     """Initialize Redis from connection string with Upstash optimizations"""
+    #     try:
+    #         parsed = urlparse(connection_string)
+            
+    #         # Create connection pool with health checks and keepalive
+    #         self.pool = ConnectionPool.from_url(
+    #             connection_string,
+    #             decode_responses=True,
+    #             max_connections=10,
+                
+    #             # Timeouts
+    #             socket_timeout=5,
+    #             socket_connect_timeout=5,
+    #             socket_keepalive=True,
+    #             socket_keepalive_options={
+    #                 1: 1,   # TCP_KEEPIDLE
+    #                 2: 1,   # TCP_KEEPINTVL  
+    #                 3: 3,   # TCP_KEEPCNT
+    #             },
+                
+    #             # CRITICAL: Health checks to detect stale connections
+    #             health_check_interval=30,
+                
+    #             # Retry on connection errors
+    #             retry_on_timeout=True,
+    #             retry_on_error=[RedisConnectionError],
+                
+    #             # SSL settings
+    #             ssl_cert_reqs=None if parsed.scheme == 'rediss' else None,
+    #         )
+            
+    #         self.client = Redis(connection_pool=self.pool)
+            
+    #         # Verify connection
+    #         self.client.ping()
+    #         logger.info(
+    #             f"Redis connected to {parsed.hostname}:{parsed.port} "
+    #             f"(SSL: {parsed.scheme == 'rediss'})"
+    #         )
+            
+    #     except Exception as e:
+    #         logger.error(f"✗ Redis init failed: {e}")
+    #         raise
+    
     def _initialize_connection(self, connection_string: str):
-        """Initialize Redis from connection string with Upstash optimizations"""
+        """Initialize Redis from connection string - Upstash-compatible"""
         try:
             parsed = urlparse(connection_string)
             
-            # Create connection pool with health checks and keepalive
+            # Upstash-compatible settings (no health_check_interval!)
             self.pool = ConnectionPool.from_url(
                 connection_string,
                 decode_responses=True,
                 max_connections=10,
                 
                 # Timeouts
-                socket_timeout=5,
-                socket_connect_timeout=5,
+                socket_timeout=10,
+                socket_connect_timeout=10,
+                
+                # Keepalive (helps with idle connections)
                 socket_keepalive=True,
                 socket_keepalive_options={
-                    1: 1,   # TCP_KEEPIDLE
-                    2: 1,   # TCP_KEEPINTVL  
-                    3: 3,   # TCP_KEEPCNT
+                    1: 60,   # TCP_KEEPIDLE - wait 60s before first keepalive
+                    2: 10,   # TCP_KEEPINTVL - 10s between keepalives
+                    3: 3,    # TCP_KEEPCNT - 3 probes before giving up
                 },
                 
-                # CRITICAL: Health checks to detect stale connections
-                health_check_interval=30,
-                
-                # Retry on connection errors
+                # Retry settings
                 retry_on_timeout=True,
-                retry_on_error=[RedisConnectionError],
                 
-                # SSL settings
-                ssl_cert_reqs=None if parsed.scheme == 'rediss' else None,
+                # SSL - no cert verification for Upstash
+                ssl_cert_reqs=None,
             )
             
             self.client = Redis(connection_pool=self.pool)
@@ -163,7 +206,6 @@ class RedisService:
         except Exception as e:
             logger.error(f"✗ Redis init failed: {e}")
             raise
-    
 
     def _get_healthy_client(self) -> Redis:
         """
