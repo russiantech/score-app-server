@@ -9,7 +9,7 @@ root_router = APIRouter(tags=["Root"], prefix="")
 async def root():
     return api_response(
         success=True,
-        message="Welcome to Dunistech Academy API ✨",
+        message="Welcome to Dunistech Academy API ",
         data={
             "version": "0.2.0", "docs": "/docs",
             "team-lead": "Chris James"

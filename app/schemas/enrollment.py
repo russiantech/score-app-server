@@ -10,7 +10,7 @@
 # #     pass
 
 # # class EnrollmentOut(EnrollmentBase):
-# #     model_config = ConfigDict(from_attributes=True)  # ✅ Pydantic V2
+# #     model_config = ConfigDict(from_attributes=True)  #  Pydantic V2
 # #     id: UUID
 
 # # v2

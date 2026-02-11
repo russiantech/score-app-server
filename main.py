@@ -24,7 +24,7 @@ logging.basicConfig(
     level=LOG_LEVEL,
     format="%(asctime)s | %(levelname)-8s | %(name)s | %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S",
-    handlers=[logging.FileHandler("app.log")]  # ✅ CHANGED: Use FileHandler for production
+    handlers=[logging.FileHandler("app.log")]  #  CHANGED: Use FileHandler for production
 )
 
 # Silence uvicorn logs (optional, but cleaner for production)
@@ -54,9 +54,9 @@ async def lifespan(app: FastAPI):
     try:
         from app.api.deps.storage import init_redis_on_startup
         init_redis_on_startup()
-        logger.info("✅ Redis initialization complete")
+        logger.info(" Redis initialization complete")
     except Exception as e:
-        logger.error(f"⚠️  Redis startup failed: {e}")
+        logger.error(f" Redis startup failed: {e}")
         logger.info("App will continue - Redis will auto-connect on first use")
     
     # App is ready
@@ -71,9 +71,9 @@ async def lifespan(app: FastAPI):
     try:
         from app.api.deps.storage import close_redis
         close_redis()
-        logger.info("✅ Redis connections closed")
+        logger.info(" Redis connections closed")
     except Exception as e:
-        logger.error(f"⚠️  Error during Redis shutdown: {e}")
+        logger.error(f" Error during Redis shutdown: {e}")
     
     logger.info("Shutdown complete")
 

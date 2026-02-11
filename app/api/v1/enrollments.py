@@ -486,7 +486,7 @@ def create_enrollment_endpoint(
             enrollment_data=enrollment_data,
         )
         
-        # ✅ FIXED: Return only the summary dict, not the object
+        #  FIXED: Return only the summary dict, not the object
         return api_response(
             enrollment.get_summary(),  # This already includes status.value
             message="Student enrolled successfully",

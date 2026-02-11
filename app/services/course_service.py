@@ -461,7 +461,7 @@ def get_course(db: Session, course_id: UUID) -> Course | None:
 
 #     query = db.query(Course).filter(Course.id == course_id)
 
-#     # 🔒 STRICTLY mirror get_course_by_id
+#     #  STRICTLY mirror get_course_by_id
 #     if include_relations:
 #         query = query.options(
 #             joinedload(Course.tutors_assigned).joinedload(CourseTutor.tutor),
@@ -526,7 +526,7 @@ def get_course(db: Session, course_id: UUID) -> Course | None:
 #                         else 0.0
 #                     )
 
-#     # 🔁 Always serialize AFTER enrichment
+#     #  Always serialize AFTER enrichment
 #     return serialize_course(course)
 
 # v2

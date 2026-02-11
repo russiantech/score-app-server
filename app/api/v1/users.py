@@ -167,7 +167,7 @@
 # async def create_user_endpoint(
 #     request: Request,
 #     data: UserCreate,
-#     background_tasks: BackgroundTasks,  # ✅ NO Depends() - FastAPI auto-injects
+#     background_tasks: BackgroundTasks,  #  NO Depends() - FastAPI auto-injects
 #     db: Session = Depends(get_db),
 # ):
 #     """

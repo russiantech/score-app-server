@@ -56,7 +56,7 @@ def create_user(db: Session, data: UserCreate, current_user: User | None = None)
             via="smtp"
         )
     except Exception as mail_err:
-        print(f"⚠ Email sending error: {mail_err}")
+        print(f" Email sending error: {mail_err}")
 
     db.commit()
     db.refresh(user)

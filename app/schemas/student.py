@@ -13,6 +13,6 @@ class StudentUpdate(StudentBase):
     pass
 
 class StudentOut(StudentBase):
-    model_config = ConfigDict(from_attributes=True)  # ✅ Pydantic V2
+    model_config = ConfigDict(from_attributes=True)  #  Pydantic V2
     id: UUID
     user: UserRead

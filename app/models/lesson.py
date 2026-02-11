@@ -79,11 +79,11 @@
 #         nullable=False
 #     )
     
-#     # ✅ Optional creator
+#     #  Optional creator
 #     created_by = mapped_column(
 #         Uuid(as_uuid=True),
 #         ForeignKey("users.id", ondelete="SET NULL"),
-#         nullable=True,      # 🔑 optional
+#         nullable=True,      #  optional
 #         index=True
 #     )
     

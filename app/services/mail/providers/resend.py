@@ -1,8 +1,8 @@
 # RESEND Provider
 
 """ 
-✔ Clean
-✔ Replaceable
+ Clean
+ Replaceable
 """
 import resend
 from email.message import EmailMessage

@@ -2,9 +2,9 @@
 Public API (send_email) 
 The ONLY Public API
 
-✔ Extremely clean
-✔ Impossible to misuse
-✔ Stable API for years
+ Extremely clean
+ Impossible to misuse
+ Stable API for years
 
 """
 

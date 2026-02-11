@@ -16,7 +16,7 @@ class TagUpdate(TagBase):
     pass
 
 class TagResponse(TagBase):
-    model_config = ConfigDict(from_attributes=True)  # ✅ Pydantic V2
+    model_config = ConfigDict(from_attributes=True)  #  Pydantic V2
     id: UUID
     slug: str
     description: str | None = None

@@ -78,7 +78,7 @@ def render_template(filename: str, **context) -> str:
 #         start_tls=False,
 #     )
 
-#     logger.info("✅ SMTP email sent successfully.")
+#     logger.info(" SMTP email sent successfully.")
 
 # v2 - tls compatible
 async def _smtp_send_async_1(
@@ -110,9 +110,9 @@ async def _smtp_send_async_1(
             start_tls=True,  # Enable STARTTLS
             timeout=30,
         )
-        logger.info("✅ SMTP email sent successfully.")
+        logger.info(" SMTP email sent successfully.")
     except Exception as e:
-        logger.error(f"❌ SMTP send failed: {e}")
+        logger.error(f" SMTP send failed: {e}")
         raise
 
 # v2  - ssl compatible
@@ -145,9 +145,9 @@ async def _smtp_send_async(
             start_tls=False,  # DISABLE STARTTLS for port 465
             timeout=30,
         )
-        logger.info("✅ SMTP email sent successfully.")
+        logger.info(" SMTP email sent successfully.")
     except Exception as e:
-        logger.error(f"❌ SMTP send failed: {e}")
+        logger.error(f" SMTP send failed: {e}")
         raise
 
 
@@ -172,7 +172,7 @@ async def _api_send_async(
 
     resend.Emails.send(params)
 
-    logger.info("✅ API email sent successfully.")
+    logger.info(" API email sent successfully.")
 
 # --------------------------------------------------------------------
 # REALTIME EMAIL SENDER (AWAITABLE)
@@ -203,7 +203,7 @@ async def send_email(
         return True
 
     except Exception:
-        logger.error("❌ Real-time email send failed")
+        logger.error(" Real-time email send failed")
         traceback.print_exc()
         return False
 
@@ -243,13 +243,13 @@ def send_email_background(
     else:
         raise ValueError("Invalid mail provider")
 
-    logger.info("📤 Background email queued.")
+    logger.info(" Background email queued.")
 
 # ============================================================================
 # EMAIL HELPERS
 # ============================================================================
 
-# ✅ Non-critical: use background
+#  Non-critical: use background
 async def send_welcome_email(
     email: EmailStr,
     names: str,
@@ -270,7 +270,7 @@ async def send_welcome_email(
     )
 
 
-# ✅ CRITICAL: MUST be realtime
+#  CRITICAL: MUST be realtime
 async def send_verification_email(
     email: EmailStr,
     code: str,
@@ -302,10 +302,10 @@ async def send_verification_email(
     )
 
 
-# ✅ CRITICAL (SMS OTP → realtime)
+#  CRITICAL (SMS OTP → realtime)
 async def send_verification_sms(phone: str, code: str) -> bool:
     try:
-        logger.info(f"📲 Sending SMS code {code} to {phone}")
+        logger.info(f" Sending SMS code {code} to {phone}")
 
         # await sms_provider.send(phone, f"Your verification code: {code}")
 
@@ -313,7 +313,7 @@ async def send_verification_sms(phone: str, code: str) -> bool:
         return False # Placeholder until SMS service is implemented
 
     except Exception:
-        logger.error("❌ SMS sending error")
+        logger.error(" SMS sending error")
         traceback.print_exc()
         return False
 
@@ -376,7 +376,7 @@ async def send_password_reset_email(
                     </p>
                     
                     <div class="warning">
-                        <strong>⚠️ Security Notice:</strong>
+                        <strong>️ Security Notice:</strong>
                         <ul>
                             <li>This link will expire in 15 minutes</li>
                             <li>If you didn't request this, please ignore this email</li>
@@ -472,7 +472,7 @@ async def send_password_changed_email(
                     <p>Your password has been successfully changed.</p>
                     
                     <div class="warning">
-                        <strong>🔒 Security Alert:</strong>
+                        <strong> Security Alert:</strong>
                         <ul>
                             <li>If you made this change, no further action is required</li>
                             <li>If you did NOT change your password, please contact support immediately</li>

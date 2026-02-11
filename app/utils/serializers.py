@@ -14,7 +14,7 @@ def serialize_lesson(lesson):
         "title": lesson.title,
         "description": lesson.description,
         "order": lesson.order,
-        "status": lesson.status,          # ✅ THIS
+        "status": lesson.status,          #  THIS
         "date": lesson.date,
         "duration": lesson.duration,
         "attendance_count": getattr(lesson, "attendance_count", 0),

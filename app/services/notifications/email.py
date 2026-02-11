@@ -75,7 +75,7 @@ async def send_welcome_email(
 
     await dispatch_email(
         subject=subject,
-        to=recipients,  # 👈 multiple recipients
+        to=recipients,  #  multiple recipients
         html=html,
         text=text,
         background_tasks=background_tasks,
@@ -145,7 +145,7 @@ async def send_verification_email(
 #     *,
 #     email: EmailStr,
 #     names: str,
-#     code: str,  # ✅ NEW - 6-digit code
+#     code: str,  #  NEW - 6-digit code
 #     background_tasks: Optional[BackgroundTasks] = None,
 # ):
 #     """Send password reset code via email"""
@@ -154,7 +154,7 @@ async def send_verification_email(
 #     html, text = render_email(
 #         "password_reset.html",
 #         names=names,
-#         code=code,  # ✅ NEW - pass code to template
+#         code=code,  #  NEW - pass code to template
 #         subject=subject,
 #     )
 
@@ -173,7 +173,7 @@ async def send_password_reset_email(
     *,
     email: EmailStr,
     names: str,
-    code: str,  # ✅ NEW - 6-digit code
+    code: str,  #  NEW - 6-digit code
     background_tasks: Optional[BackgroundTasks] = None,
 ):
     """Send password reset code via email"""
@@ -182,7 +182,7 @@ async def send_password_reset_email(
     html, text = render_email(
         "password_reset.html",
         names=names,
-        code=code,  # ✅ NEW - pass code to template
+        code=code,  #  NEW - pass code to template
         subject=subject,
     )
 

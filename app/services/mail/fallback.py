@@ -23,15 +23,15 @@ PROVIDERS = [
 async def send_with_fallback(msg: EmailMessage) -> bool:
     for provider, sender in PROVIDERS:
         try:
-            logger.info(f"📤 Sending email via {provider}")
+            logger.info(f" Sending email via {provider}")
             await sender(msg)
-            logger.info(f"✅ Email sent via {provider}")
+            logger.info(f" Email sent via {provider}")
             return True
         except Exception as exc:
             logger.warning(
-                f"⚠️ {provider} failed: {exc.__class__.__name__}: {exc}"
+                f"️ {provider} failed: {exc.__class__.__name__}: {exc}"
             )
 
-    logger.error("❌ All email providers failed")
+    logger.error(" All email providers failed")
     return False
 

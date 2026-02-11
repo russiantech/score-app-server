@@ -8,7 +8,7 @@
 #     graded_by: UUID
 
 # class ScoreOut(BaseModel):
-#     model_config = ConfigDict(from_attributes=True)  # ✅ Pydantic V2
+#     model_config = ConfigDict(from_attributes=True)  #  Pydantic V2
 #     id: UUID
 #     enrollment_id: UUID
 #     assessment_id: UUID

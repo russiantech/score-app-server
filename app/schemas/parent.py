@@ -9,7 +9,7 @@
 #     user_id: UUID
 
 # class ParentOut(ParentBase):
-#     model_config = ConfigDict(from_attributes=True)  # ✅ Pydantic V2
+#     model_config = ConfigDict(from_attributes=True)  #  Pydantic V2
 #     id: UUID
 #     user: UserRead
 

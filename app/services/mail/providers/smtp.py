@@ -1,9 +1,9 @@
 # SMTP Providers
 
 """ 
-✔ No logging
-✔ No fallback logic
-✔ Pure transport layer
+ No logging
+ No fallback logic
+ Pure transport layer
 """
 
 import aiosmtplib

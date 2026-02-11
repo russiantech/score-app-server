@@ -14,7 +14,7 @@ class PermissionCreate(PermissionBase):
     pass
 
 class PermissionRead(PermissionBase):
-    model_config = ConfigDict(from_attributes=True) # ✅ Pydantic V2
+    model_config = ConfigDict(from_attributes=True) #  Pydantic V2
     id: UUID
 
 class RoleBase(BaseModel):
@@ -29,7 +29,7 @@ class RoleUpdate(RoleBase):
     pass
 
 class RoleRead(RoleBase):
-    model_config = ConfigDict(from_attributes=True)  # ✅ Pydantic V2
+    model_config = ConfigDict(from_attributes=True)  #  Pydantic V2
     id: UUID
     permissions: List[PermissionRead] = Field([], description="List of permissions assigned to the role")
 

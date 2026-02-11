@@ -140,7 +140,7 @@ def auto_discover_models():
     discovered_models = {}
 
     for root, dirs, files in os.walk(BASE_DIR):
-        # 🔒 SKIP directories named "_" or starting with "_"
+        #  SKIP directories named "_" or starting with "_"
         dirs[:] = [
             d for d in dirs
             if not d.startswith("_") and d != "_"

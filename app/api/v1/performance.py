@@ -278,7 +278,7 @@ def export_performance_report(
         )
 
     try:
-        # 🔹 Fetch student
+        #  Fetch student
         student = (
             db.query(User)
             .filter(User.id == student_id)
@@ -291,7 +291,7 @@ def export_performance_report(
                 detail="Student not found"
             )
 
-        # 🔹 Build safe student name
+        #  Build safe student name
         full_name = f"{student.names}"
         safe_name = re.sub(r"[^A-Za-z0-9_]", "", full_name)
 

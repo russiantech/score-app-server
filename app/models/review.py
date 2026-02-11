@@ -414,7 +414,7 @@ class ReviewReply(UUIDMixin, TimestampMixin, Base):
     
     author: Mapped["User"] = relationship("User")
     
-    # 🔥 Only 2 required relationships:
+    #  Only 2 required relationships:
     # parent: Mapped[Optional["ReviewReply"]] = relationship(
     #     "ReviewReply",
     #     remote_side="ReviewReply.id",      # IMPORTANT FIX
