@@ -156,7 +156,7 @@ class RedisService:
             # Verify connection
             self.client.ping()
             logger.info(
-                f"✓ Redis connected to {parsed.hostname}:{parsed.port} "
+                f"Redis connected to {parsed.hostname}:{parsed.port} "
                 f"(SSL: {parsed.scheme == 'rediss'})"
             )
             
