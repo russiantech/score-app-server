@@ -14,7 +14,7 @@ from fastapi import (
 from sqlalchemy import select, or_
 from sqlalchemy.orm import Session
 
-from app.api.deps.storage import get_redis_service
+from app.api.deps.storage import get_redis_instance, get_redis_service
 from app.api.deps.users import get_current_user, get_db
 from app.core.config import get_app_config
 from app.core.security.auth import (
@@ -45,7 +45,7 @@ async def signup(
     data: SignupSchema,
     request: Request,
     db: Session = Depends(get_db),
-    redis: RedisService = Depends(get_redis_service),
+    # redis: RedisService = Depends(get_redis_service),
 ) -> dict:
     """
     Step 1: Initiate signup process
@@ -58,7 +58,7 @@ async def signup(
     """
     try:
         client_ip = get_client_ip(request)
-        
+        redis = get_redis_instance()
         # Rate limiting
         _, allowed = redis.increment_rate_limit(
             f"signup_initiate:{client_ip}",

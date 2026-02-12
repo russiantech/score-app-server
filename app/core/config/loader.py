@@ -68,8 +68,8 @@ class ConfigLoader:
         dotenv_path = project_root / '.env'
         
         # Debug: print the path (remove after confirming it works)
-        print(f"Loading .env from: {dotenv_path}")
-        print(f".env exists: {dotenv_path.exists()}")
+        # print(f"Loading .env from: {dotenv_path}")
+        # print(f".env exists: {dotenv_path.exists()}")
         
         # Load with explicit path
         load_dotenv(dotenv_path, override=True)

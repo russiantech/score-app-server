@@ -60,6 +60,37 @@ class ExceptionHandler:
             status_code=exc.status_code,
             path=str(request.url.path)
         )
+    
+    async def validation_exception_handler_0(
+        self,
+        request: Request,
+        exc: RequestValidationError
+    ) -> JSONResponse:
+        """Handle validation errors and return clean, structured responses."""
+        
+        logger.warning(
+            f"Validation error at {request.url.path}: {exc.errors()}"
+        )
+
+        formatted_errors = []
+
+        for err in exc.errors():
+            field = err.get("loc", [])[-1]
+            message = err.get("msg", "Invalid input")
+
+            formatted_errors.append({
+                "field": field,
+                "message": message
+            })
+
+        return api_response(
+            success=False,
+            # message="Validation error.",
+            message=f"{formatted_errors[0].get('message')}",
+            errors=formatted_errors,
+            status_code=422,
+            path=str(request.url.path)
+        )
 
     async def validation_exception_handler(self, request: Request, exc: RequestValidationError) -> JSONResponse:
         """Handle Pydantic validation errors and return a friendly message."""
@@ -80,7 +111,7 @@ class ExceptionHandler:
         elif field == "email":
             msg = "Please enter a valid email address."
         elif field == "phone":
-            msg = "Phone number must include country code and 7–15 digits (e.g., +2348012345678)."
+            msg = "Invalid phone number format. Use a valid local number, (e.g., 08012345678) or international format (e.g., +14155552671)."
         elif field == "name":
             msg = "Name must be 2–50 letters and spaces only."
         elif field == "password":

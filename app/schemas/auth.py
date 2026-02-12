@@ -106,22 +106,53 @@ class BaseUserSchema(BaseModel):
         
         return v
     
+    # @field_validator('phone')
+    # @classmethod
+    # def validate_phone(cls, v: str) -> str:
+    #     """Validate phone format"""
+    #     if not PHONE_PATTERN.match(v):
+    #         raise ValueError('Invalid phone number format')
+        
+    #     if not v.startswith('+'):
+    #         raise ValueError(
+    #             'Phone number must include country code (e.g., +234...)'
+    #         )
+        
+    #     return v
+
     @field_validator('phone')
     @classmethod
     def validate_phone(cls, v: str) -> str:
-        """Validate phone format"""
-        if not PHONE_PATTERN.match(v):
-            raise ValueError('Invalid phone number format')
+        """
+        Validate phone numbers in either:
+        - International format: +14155552671
+        - Local numeric format: 08012345678
+        """
+
+        if not v:
+            raise ValueError("Phone number is required.")
+
+        v = v.strip().replace(" ", "")
+
+        # Allow purely local numbers starting with 0
+        if v.startswith("0") and v.isdigit():
+            if len(v) < 7 or len(v) > 15:
+                raise ValueError(
+                    "Phone number must contain between 7 and 15 digits."
+                )
+            return v
+
+        # Allow international numbers with +
+        if PHONE_PATTERN.match(v):
+            return v
+
+        raise ValueError(
+            "Invalid phone number format. Use a valid local number "
+            "(e.g., 08012345678) or international format (e.g., +14155552671)."
+        )
         
-        if not v.startswith('+'):
-            raise ValueError(
-                'Phone number must include country code (e.g., +234...)'
-            )
-        
-        return v
-    
-    class Config:
-        extra = "forbid"
+        class Config:
+            extra = "forbid"
 
 
 class SignupSchema(BaseUserSchema):

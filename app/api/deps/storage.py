@@ -28,7 +28,7 @@ def get_redis_instance() -> RedisService:
     if _redis_instance is None:
         config = get_app_config()
         redis_url = config.redis_config.redis_connection_string
-        print(redis_url)
+        # print(redis_url)
         if not redis_url:
             raise RuntimeError("Redis connection string not configured in environment")
         
@@ -63,7 +63,7 @@ def get_redis_service() -> Generator[RedisService, None, None]:
         # (The service itself handles reconnection, so this is optional)
         if not redis_service.ping():
             logger.warning("  Redis health check failed before yielding")
-        
+
         yield redis_service
     
     except Exception as e:
