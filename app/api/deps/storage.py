@@ -73,7 +73,7 @@ def get_redis_service() -> Generator[RedisService, None, None]:
         # For non-critical, you could yield a mock/fallback service
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Cache service temporarily unavailable. Please try again."
+            detail="Cache service temporarily unavailable. Please try again. 1"
         )
 
 
