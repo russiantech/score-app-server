@@ -63,7 +63,8 @@ def get_redis_service() -> Generator[RedisService, None, None]:
         # (The service itself handles reconnection, so this is optional)
         if not redis_service.ping():
             logger.warning("  Redis health check failed before yielding")
-
+            # Continue anyway - will fail gracefully in the endpoint
+        
         yield redis_service
     
     except Exception as e:
@@ -105,12 +106,13 @@ def init_redis_on_startup():
     try:
         redis = get_redis_instance()
         if redis.ping():
-            logger.info("  Redis startup check passed")
+            logger.info("Redis startup check passed")
         else:
-            logger.warning("  Redis startup check failed (will retry on first use)")
+            logger.warning("Redis startup check failed (will retry on first use)")
     
     except Exception as e:
         logger.error(f" Redis startup initialization failed: {e}")
         # Don't raise - let app start even if Redis is temporarily down
+        # The _get_healthy_client() method will reconnect when needed
 
     

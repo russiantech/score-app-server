@@ -151,8 +151,8 @@ class BaseUserSchema(BaseModel):
             "(e.g., 08012345678) or international format (e.g., +14155552671)."
         )
         
-        class Config:
-            extra = "forbid"
+    class Config:
+        extra = "forbid"
 
 
 class SignupSchema(BaseUserSchema):
