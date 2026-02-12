@@ -164,47 +164,72 @@ class RedisService:
     #         logger.error(f"✗ Redis init failed: {e}")
     #         raise
     
-    def _initialize_connection(self, connection_string: str):
-        """Initialize Redis from connection string - Upstash-compatible"""
-        try:
-            parsed = urlparse(connection_string)
+    # def _initialize_connection(self, connection_string: str):
+    #     """Initialize Redis from connection string - Upstash-compatible"""
+    #     try:
+    #         parsed = urlparse(connection_string)
             
-            # Upstash-compatible settings (no health_check_interval!)
-            self.pool = ConnectionPool.from_url(
+    #         # Upstash-compatible settings (no health_check_interval!)
+    #         self.pool = ConnectionPool.from_url(
+    #             connection_string,
+    #             decode_responses=True,
+    #             max_connections=10,
+                
+    #             # Timeouts
+    #             socket_timeout=10,
+    #             socket_connect_timeout=10,
+                
+    #             # Keepalive (helps with idle connections)
+    #             socket_keepalive=True,
+    #             socket_keepalive_options={
+    #                 1: 60,   # TCP_KEEPIDLE - wait 60s before first keepalive
+    #                 2: 10,   # TCP_KEEPINTVL - 10s between keepalives
+    #                 3: 3,    # TCP_KEEPCNT - 3 probes before giving up
+    #             },
+                
+    #             # Retry settings
+    #             retry_on_timeout=True,
+                
+    #             # SSL - no cert verification for Upstash
+    #             ssl_cert_reqs=None,
+    #         )
+            
+    #         self.client = Redis(connection_pool=self.pool)
+            
+    #         # Verify connection
+    #         self.client.ping()
+    #         logger.info(
+    #             f"Redis connected to {parsed.hostname}:{parsed.port} "
+    #             f"(SSL: {parsed.scheme == 'rediss'})"
+    #         )
+            
+    #     except Exception as e:
+    #         logger.error(f"✗ Redis init failed: {e}")
+    #         raise
+
+    def _initialize_connection(self, connection_string: str):
+        """Initialize Redis safely for Upstash + shared hosting"""
+        try:
+            self.client = Redis.from_url(
                 connection_string,
                 decode_responses=True,
                 max_connections=10,
-                
-                # Timeouts
                 socket_timeout=10,
                 socket_connect_timeout=10,
-                
-                # Keepalive (helps with idle connections)
-                socket_keepalive=True,
-                socket_keepalive_options={
-                    1: 60,   # TCP_KEEPIDLE - wait 60s before first keepalive
-                    2: 10,   # TCP_KEEPINTVL - 10s between keepalives
-                    3: 3,    # TCP_KEEPCNT - 3 probes before giving up
-                },
-                
-                # Retry settings
                 retry_on_timeout=True,
-                
-                # SSL - no cert verification for Upstash
-                ssl_cert_reqs=None,
             )
-            
-            self.client = Redis(connection_pool=self.pool)
-            
+
             # Verify connection
             self.client.ping()
+
+            parsed = urlparse(connection_string)
             logger.info(
                 f"Redis connected to {parsed.hostname}:{parsed.port} "
                 f"(SSL: {parsed.scheme == 'rediss'})"
             )
-            
+
         except Exception as e:
-            logger.error(f"✗ Redis init failed: {e}")
+            logger.error(f"Redis init failed: {e}")
             raise
 
     def _get_healthy_client(self) -> Redis:

@@ -45,36 +45,36 @@ class ConfigLoader:
     #     self.yaml_config = self._load_yaml_config()
     
     
-    # def __init__(self):
-    #     """Initialize the config loader and load environment variables."""
-    #     # Get the absolute path to the .env file
-    #     # Go up from config/loader.py -> config/ -> app/ -> project root
-    #     current_file = Path(__file__).resolve()
-    #     project_root = current_file.parent.parent.parent  # Go up 3 levels
-    #     dotenv_path = project_root / '.env'
-        
-    #     # Load with explicit path
-    #     load_dotenv(dotenv_path, override=True)
-        
-    #     self.yaml_config = self._load_yaml_config()
-
-    # v2 - debug mode
     def __init__(self):
         """Initialize the config loader and load environment variables."""
-        # Get absolute path to .env file
-        # Go up from: loader.py -> config/ -> core/ -> app/ -> project_root/
+        # Get the absolute path to the .env file
+        # Go up from config/loader.py -> config/ -> app/ -> project root
         current_file = Path(__file__).resolve()
-        project_root = current_file.parent.parent.parent.parent
+        project_root = current_file.parent.parent.parent  # Go up 3 levels
         dotenv_path = project_root / '.env'
-        
-        # Debug: print the path (remove after confirming it works)
-        print(f"Loading .env from: {dotenv_path}")
-        print(f".env exists: {dotenv_path.exists()}")
         
         # Load with explicit path
         load_dotenv(dotenv_path, override=True)
         
         self.yaml_config = self._load_yaml_config()
+
+    # v2 - debug mode
+    # def __init__(self):
+    #     """Initialize the config loader and load environment variables."""
+    #     # Get absolute path to .env file
+    #     # Go up from: loader.py -> config/ -> core/ -> app/ -> project_root/
+    #     current_file = Path(__file__).resolve()
+    #     project_root = current_file.parent.parent.parent.parent
+    #     dotenv_path = project_root / '.env'
+        
+    #     # Debug: print the path (remove after confirming it works)
+    #     print(f"Loading .env from: {dotenv_path}")
+    #     print(f".env exists: {dotenv_path.exists()}")
+        
+    #     # Load with explicit path
+    #     load_dotenv(dotenv_path, override=True)
+        
+    #     self.yaml_config = self._load_yaml_config()
     
     def _load_yaml_config(self) -> Dict[str, Any]:
         """Load YAML configuration file."""
