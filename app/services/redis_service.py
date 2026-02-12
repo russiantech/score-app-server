@@ -469,7 +469,15 @@ class RedisService:
             # )
             
             
-            self.client = Redis.from_url("rediss://default:AaF5AAIncDE2ZWFhNGQzNTY1N2U0ZWE2OGIwYThiYzNhMmIzZDkzOHAxNDEzMzc@well-dassie-41337.upstash.io:6379")
+            # self.client = Redis.from_url("rediss://default:AaF5AAIncDE2ZWFhNGQzNTY1N2U0ZWE2OGIwYThiYzNhMmIzZDkzOHAxNDEzMzc@well-dassie-41337.upstash.io:6379")
+            # self.client = Redis.from_url("redis-14352.c341.af-south-1-1.ec2.cloud.redislabs.com:14352")
+            self.client = Redis(
+                host='redis-14352.c341.af-south-1-1.ec2.cloud.redislabs.com',
+                port=14352,
+                decode_responses=True,
+                username="default",
+                password="7rbqMGbgfA7am40c9Oe6OXLyW5LSVy7z",
+            )
 
             self.client = Redis(connection_pool=self.pool)
             
@@ -481,7 +489,7 @@ class RedisService:
             )
             
         except Exception as e:
-            logger.error(f"✗ Redis init failed: {e}")
+            logger.error(f"Redis init failed: {e}")
             raise
 
     def _get_healthy_client(self) -> Redis:
