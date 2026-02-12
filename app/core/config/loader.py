@@ -1,6 +1,7 @@
 # v2 - direct import - explicit is better than implicit - python-zen
 
 import os
+from pathlib import Path
 import yaml
 from typing import Any, Dict, List, Optional
 from dotenv import load_dotenv
@@ -30,11 +31,34 @@ from .models import (
 class ConfigLoader:
     """Loads application configuration from environment variables and YAML files."""
     
+    # def __init__(self):
+    #     """Initialize the config loader and load environment variables."""
+    #     load_dotenv(override=True)
+    #     self.yaml_config = self._load_yaml_config()
+    
+    # def __init__(self):
+    #     """Initialize the config loader and load environment variables."""
+    #     # Explicit path to .env file
+    #     dotenv_path = '/home/simpdinr/api-studentscores.simplylovely.ng/.env'
+    #     load_dotenv(dotenv_path, override=True)
+        
+    #     self.yaml_config = self._load_yaml_config()
+    
+    
     def __init__(self):
         """Initialize the config loader and load environment variables."""
-        load_dotenv(override=True)
+        # Get the absolute path to the .env file
+        # Go up from config/loader.py -> config/ -> app/ -> project root
+        current_file = Path(__file__).resolve()
+        project_root = current_file.parent.parent.parent  # Go up 3 levels
+        dotenv_path = project_root / '.env'
+        
+        # Load with explicit path
+        load_dotenv(dotenv_path, override=True)
+        
         self.yaml_config = self._load_yaml_config()
-    
+
+
     def _load_yaml_config(self) -> Dict[str, Any]:
         """Load YAML configuration file."""
         yaml_path = os.path.join(os.path.dirname(__file__), "config.yaml")
