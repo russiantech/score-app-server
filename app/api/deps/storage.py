@@ -28,7 +28,7 @@ def get_redis_instance() -> RedisService:
     if _redis_instance is None:
         config = get_app_config()
         redis_url = config.redis_config.redis_connection_string
-        
+        print(redis_url)
         if not redis_url:
             raise RuntimeError("Redis connection string not configured in environment")
         
