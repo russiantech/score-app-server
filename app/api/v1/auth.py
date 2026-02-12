@@ -183,7 +183,7 @@ async def verify_signup(
     request: Request,
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
-    redis: RedisService = Depends(get_redis_service),
+    # redis: RedisService = Depends(get_redis_service),
 ) -> dict:
     """
     Step 2: Verify codes and create user account
@@ -191,6 +191,7 @@ async def verify_signup(
     """
     try:
         client_ip = get_client_ip(request)
+        redis = get_redis_instance()
         
         # Rate limiting
         _, allowed = redis.increment_rate_limit(
@@ -328,11 +329,12 @@ async def verify_signup(
 async def resend_verification(
     data: ResendVerificationSchema,
     request: Request,
-    redis: RedisService = Depends(get_redis_service),
+    # redis: RedisService = Depends(get_redis_service),
 ) -> dict:
     """Resend verification code for email or phone"""
     try:
         client_ip = get_client_ip(request)
+        redis = get_redis_instance()
         
         # Rate limiting
         _, allowed = redis.increment_rate_limit(
@@ -657,11 +659,12 @@ async def forgot_password(
     request: Request,
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
-    redis: RedisService = Depends(get_redis_service),
+    # redis: RedisService = Depends(get_redis_service),
 ) -> dict:
     
     client_ip = get_client_ip(request)
-
+    redis = get_redis_instance()
+    
     redis.increment_rate_limit(
         f"forgot_password:{client_ip}",
         window=3600,
@@ -723,11 +726,12 @@ async def reset_password(
     data: ResetPasswordSchema,
     request: Request,
     db: Session = Depends(get_db),
-    redis: RedisService = Depends(get_redis_service),
+    # redis: RedisService = Depends(get_redis_service),
 ) -> dict:
     logger.info(f"Reset password data: {data}")
     client_ip = get_client_ip(request)
-
+    redis = get_redis_instance()
+    
     redis.increment_rate_limit(
         f"reset_password:{client_ip}",
         window=300,
