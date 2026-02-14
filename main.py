@@ -1,8 +1,11 @@
+from datetime import datetime
 import uvicorn
 import logging
-import sys
 import os
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, status
+from fastapi.responses import JSONResponse
+import traceback
+import uuid 
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from contextlib import asynccontextmanager
@@ -91,6 +94,34 @@ app = FastAPI(
     redoc_url="/redoc",
     openapi_url="/openapi.json"
 )
+
+# ============================================================
+# GLOBAL EXCEPTION HANDLER - NEVER LET APP CRASH
+# ============================================================
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    """
+    Catch ALL unhandled exceptions.
+    Logs error and returns 500 - NEVER crashes the app.
+    """
+    error_id = str(uuid.uuid4())
+    
+    # Log full error details
+    logger.error(f"[{error_id}] Unhandled exception on {request.method} {request.url.path}")
+    logger.error(f"[{error_id}] Error type: {type(exc).__name__}")
+    logger.error(f"[{error_id}] Error message: {exc}")
+    logger.error(f"[{error_id}] Traceback:\n{traceback.format_exc()}")
+    
+    # Return user-friendly error
+    return JSONResponse(
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        content={
+            "success": False,
+            "message": "An unexpected error occurred. Please try again or contact support.",
+            "error_id": error_id,
+            "timestamp": datetime.utcnow().isoformat()
+        }
+    )
 
 
 # ------------------------------------------------------------------ 

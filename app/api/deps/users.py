@@ -1,70 +1,11 @@
-
-# from fastapi import Depends, HTTPException
-# from fastapi.security import OAuth2PasswordBearer
-# from sqlalchemy import or_
-# from sqlalchemy.orm import Session
-# from jose import jwt, JWTError
-# from app.db.session import SessionLocal
-# from app.core.config import get_app_config
-# from app.models.user import User
-# from fastapi import Depends, HTTPException
-# from app.models.user import User
-
-# app_config = get_app_config()
-# tokenUrl = f"{app_config.general_config.api_prefix}/auth/signin"
-# oauth2_scheme = OAuth2PasswordBearer(tokenUrl=tokenUrl)
-
-# def get_db():
-#     db = SessionLocal()
-#     try:
-#         yield db
-#     finally:
-#         db.close()
-
-
-# def get_current_user(
-#     token: str = Depends(oauth2_scheme),
-#     db: Session = Depends(get_db)
-# ) -> User:
-
-#     try:
-#         data = jwt.decode(
-#             token,
-#             app_config.security_config.auth_jwt_secret_key,
-#             algorithms=[app_config.security_config.jwt_algorithm]
-#         )
-#         sub = data.get("sub")
-#         if not sub:
-#             raise HTTPException(401, "Invalid token payload")
-
-#         # Auto-detect whether sub is numeric (id) or string (email/username/phone)
-#         filters = [
-#             User.username == sub,
-#             User.email == sub,
-#             User.phone == sub
-#         ]
-
-#         # If sub looks like an ID (digits)
-#         if str(sub).isdigit():
-#             filters.append(User.id == int(sub))
-
-#         user = db.query(User).filter(or_(*filters)).first()
-
-#     except JWTError:
-#         raise HTTPException(401, "Invalid authentication token")
-
-#     if not user:
-#         raise HTTPException(401, "User not found")
-
-#     return user
-
-
+# /app/api/deps/users.py
 
 # v2
-
+import logging
 from typing import Optional
 from fastapi import Depends, HTTPException, status, Cookie
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.db.session import SessionLocal
@@ -74,14 +15,49 @@ from app.models.user import User
 # Security scheme for Swagger UI
 security = HTTPBearer(auto_error=False)
 
+logger = logging.getLogger(__name__)
+
+# def get_db():
+#     """Database session dependency."""
+#     db = SessionLocal()
+#     try:
+#         yield db
+#     finally:
+#         db.close()
 
 def get_db():
-    """Database session dependency."""
+    """
+    Database session dependency.
+    NEVER crashes - auto-retries once on failure.
+    """
     db = SessionLocal()
     try:
+        # Test connection
+        db.execute(text("SELECT 1"))
         yield db
+    except Exception as e:
+        logger.error(f"Database connection error: {e}")
+        db.rollback()
+        
+        # Try to reconnect once
+        try:
+            db.close()
+            db = SessionLocal()
+            db.execute(text("SELECT 1"))
+            logger.info("Database reconnected successfully")
+            yield db
+        except Exception as e2:
+            logger.error(f"Database reconnection failed: {e2}")
+            # Raise HTTP error instead of crashing
+            raise HTTPException(
+                status_code=503,
+                detail="Database temporarily unavailable. Please try again in a moment."
+            )
     finally:
-        db.close()
+        try:
+            db.close()
+        except Exception as e:
+            logger.error(f"⚠ Error closing database: {e}")
 
 
 def get_current_user_optional(
