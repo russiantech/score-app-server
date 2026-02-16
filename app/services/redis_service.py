@@ -164,110 +164,85 @@ class RedisService:
     #         logger.error(f"✗ Redis init failed: {e}")
     #         raise
     
-    # def _initialize_connection(self, connection_string: str):
-    #     """Initialize Redis from connection string - Upstash-compatible"""
-    #     try:
-    #         parsed = urlparse(connection_string)
-            
-    #         # Upstash-compatible settings (no health_check_interval!)
-    #         self.pool = ConnectionPool.from_url(
-    #             connection_string,
-    #             decode_responses=True,
-    #             max_connections=10,
-                
-    #             # Timeouts
-    #             socket_timeout=10,
-    #             socket_connect_timeout=10,
-                
-    #             # Keepalive (helps with idle connections)
-    #             socket_keepalive=True,
-    #             socket_keepalive_options={
-    #                 1: 60,   # TCP_KEEPIDLE - wait 60s before first keepalive
-    #                 2: 10,   # TCP_KEEPINTVL - 10s between keepalives
-    #                 3: 3,    # TCP_KEEPCNT - 3 probes before giving up
-    #             },
-                
-    #             # Retry settings
-    #             retry_on_timeout=True,
-                
-    #             # SSL - no cert verification for Upstash
-    #             ssl_cert_reqs=None,
-    #         )
-            
-    #         self.client = Redis(connection_pool=self.pool)
-            
-    #         # Verify connection
-    #         self.client.ping()
-    #         logger.info(
-    #             f"Redis connected to {parsed.hostname}:{parsed.port} "
-    #             f"(SSL: {parsed.scheme == 'rediss'})"
-    #         )
-            
-    #     except Exception as e:
-    #         logger.error(f"✗ Redis init failed: {e}")
-    #         raise
-
     def _initialize_connection(self, connection_string: str):
-        """Initialize Redis safely for Upstash + shared hosting"""
+        """Initialize Redis from connection string - Upstash-compatible"""
         try:
-            self.client = Redis.from_url(
+            parsed = urlparse(connection_string)
+            
+            # Upstash-compatible settings (no health_check_interval!)
+            self.pool = ConnectionPool.from_url(
                 connection_string,
                 decode_responses=True,
                 max_connections=10,
+                
+                # Timeouts
                 socket_timeout=10,
                 socket_connect_timeout=10,
-                retry_on_timeout=True,
+                
+                # Keepalive (helps with idle connections)
                 socket_keepalive=True,
                 socket_keepalive_options={
-                1: 1,   # TCP_KEEPIDLE
-                2: 1,   # TCP_KEEPINTVL  
-                3: 3,   # TCP_KEEPCNT
-            },
+                    1: 60,   # TCP_KEEPIDLE - wait 60s before first keepalive
+                    2: 10,   # TCP_KEEPINTVL - 10s between keepalives
+                    3: 3,    # TCP_KEEPCNT - 3 probes before giving up
+                },
+                
+                # Retry settings
+                retry_on_timeout=True,
+                
+                # SSL - no cert verification for Upstash
+                ssl_cert_reqs=None,
             )
-
+            
+            self.client = Redis(connection_pool=self.pool)
+            
             # Verify connection
             self.client.ping()
-
-            parsed = urlparse(connection_string)
             logger.info(
                 f"Redis connected to {parsed.hostname}:{parsed.port} "
                 f"(SSL: {parsed.scheme == 'rediss'})"
             )
-
+            
         except Exception as e:
-            logger.error(f"Redis init failed: {e}")
+            logger.error(f"✗ Redis init failed: {e}")
             raise
 
-    # def _get_healthy_client(self) -> Redis:
-    #     """
-    #     Get Redis client with automatic reconnection on stale connections.
-    #     This is the KEY to fixing "Connection closed by server" errors.
-    #     """
-    #     if not self.client:
-    #         raise RuntimeError("Redis client not initialized")
-        
+    # def _initialize_connection(self, connection_string: str):
+    #     """Initialize Redis safely for Upstash + shared hosting"""
     #     try:
-    #         # Quick ping to check if connection is alive
+    #         self.client = Redis.from_url(
+    #             connection_string,
+    #             decode_responses=True,
+    #             max_connections=10,
+    #             socket_timeout=10,
+    #             socket_connect_timeout=10,
+    #             retry_on_timeout=True,
+    #             socket_keepalive=True,
+    #             socket_keepalive_options={
+    #             1: 1,   # TCP_KEEPIDLE
+    #             2: 1,   # TCP_KEEPINTVL  
+    #             3: 3,   # TCP_KEEPCNT
+    #         },
+    #         )
+
+    #         # Verify connection
     #         self.client.ping()
-    #         return self.client
-        
-    #     except (RedisConnectionError, ConnectionError, BrokenPipeError) as e:
-    #         logger.warning(f"Redis connection stale ({e}), reconnecting...")
-            
-    #         # Recreate client from pool (pool will handle creating new connection)
-    #         try:
-    #             self.client = Redis(connection_pool=self.pool)
-    #             self.client.ping()
-    #             logger.info(" Redis reconnected successfully")
-    #             return self.client
-            
-    #         except Exception as reconnect_err:
-    #             logger.error(f"  Redis reconnection failed: {reconnect_err}")
-    #             raise
-    
+
+    #         parsed = urlparse(connection_string)
+    #         logger.info(
+    #             f"Redis connected to {parsed.hostname}:{parsed.port} "
+    #             f"(SSL: {parsed.scheme == 'rediss'})"
+    #         )
+
+    #     except Exception as e:
+    #         logger.error(f"Redis init failed: {e}")
+    #         raise
+
+
     def _get_healthy_client(self) -> Redis:
         """
-        Get Redis client with reconnection on stale connections.
+        Get Redis client with automatic reconnection on stale connections.
+        This is the KEY to fixing "Connection closed by server" errors.
         """
         if not self.client:
             raise RuntimeError("Redis client not initialized")
@@ -276,24 +251,23 @@ class RedisService:
             # Quick ping to check if connection is alive
             self.client.ping()
             return self.client
-            
+        
         except (RedisConnectionError, ConnectionError, BrokenPipeError) as e:
             logger.warning(f"Redis connection stale ({e}), reconnecting...")
             
-            # Recreate client
+            # Recreate client from pool (pool will handle creating new connection)
             try:
-                if hasattr(self, 'connection_string'):
-                    self._initialize_connection(self.connection_string)
-                    logger.info("Redis reconnected successfully")
-                    return self.client
-                else:
-                    raise RuntimeError("Cannot reconnect - connection string not saved")
-                    
+                self.client = Redis(connection_pool=self.pool)
+                self.client.ping()
+                logger.info(" Redis reconnected successfully")
+                return self.client
+            
             except Exception as reconnect_err:
-                logger.error(f"Redis reconnection failed: {reconnect_err}")
+                logger.error(f"  Redis reconnection failed: {reconnect_err}")
                 raise
-        
-        
+    
+    
+
     def get_client(self) -> Redis:
         """Get Redis client (backward compatibility)"""
         return self._get_healthy_client()

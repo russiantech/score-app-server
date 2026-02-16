@@ -61,11 +61,70 @@ logger = logging.getLogger(__name__)
 #         except Exception as e:
 #             logger.error(f"Error closing database: {e}")
 
-# v3
+# # v3
+# def get_db():
+#     """
+#     Database session dependency - BULLETPROOF version.
+#     NEVER crashes, even during cleanup.
+#     """
+#     db = SessionLocal()
+    
+#     try:
+#         # Test connection
+#         try:
+#             db.execute(text("SELECT 1"))
+#         except Exception as conn_error:
+#             logger.error(f"Database connection test failed: {conn_error}")
+#             # Try to reconnect once
+#             try:
+#                 db.close()
+#                 db = SessionLocal()
+#                 db.execute(text("SELECT 1"))
+#                 logger.info("Database reconnected")
+#             except Exception as reconnect_error:
+#                 logger.error(f"Database reconnection failed: {reconnect_error}")
+#                 # Don't crash - raise HTTP error
+#                 raise HTTPException(
+#                     status_code=503,
+#                     detail="Database temporarily unavailable"
+#                 )
+        
+#         yield db
+        
+#     except HTTPException:
+#         # Re-raise HTTP exceptions (these are intentional)
+#         raise
+        
+#     except Exception as e:
+#         # Log any other exception but DON'T crash
+#         logger.error(f"Unexpected error in get_db: {e}")
+#         logger.error(traceback.format_exc())
+#         # Rollback to be safe
+#         try:
+#             db.rollback()
+#         except:
+#             pass
+#         raise HTTPException(
+#             status_code=500,
+#             detail="An unexpected database error occurred"
+#         )
+        
+#     finally:
+#         # CRITICAL: Never let cleanup crash
+#         try:
+#             db.close()
+#         except Exception as cleanup_error:
+#             logger.error(f"Error closing database (ignored): {cleanup_error}")
+#             # Swallow the error - NEVER let cleanup crash
+#             pass
+
+# v4
+from fastapi.exceptions import RequestValidationError
+
 def get_db():
     """
     Database session dependency - BULLETPROOF version.
-    NEVER crashes, even during cleanup.
+    Does NOT catch validation errors (those should pass through).
     """
     db = SessionLocal()
     
@@ -80,10 +139,9 @@ def get_db():
                 db.close()
                 db = SessionLocal()
                 db.execute(text("SELECT 1"))
-                logger.info("Database reconnected")
+                logger.info("✓ Database reconnected")
             except Exception as reconnect_error:
                 logger.error(f"Database reconnection failed: {reconnect_error}")
-                # Don't crash - raise HTTP error
                 raise HTTPException(
                     status_code=503,
                     detail="Database temporarily unavailable"
@@ -95,15 +153,15 @@ def get_db():
         # Re-raise HTTP exceptions (these are intentional)
         raise
         
+    except RequestValidationError:
+        # CRITICAL: Let validation errors pass through - DON'T catch them!
+        raise
+        
     except Exception as e:
-        # Log any other exception but DON'T crash
-        logger.error(f"Unexpected error in get_db: {e}")
+        # Only catch actual database errors
+        logger.error(f"Database error in get_db: {e}")
         logger.error(traceback.format_exc())
-        # Rollback to be safe
-        try:
-            db.rollback()
-        except:
-            pass
+        db.rollback()
         raise HTTPException(
             status_code=500,
             detail="An unexpected database error occurred"
@@ -115,8 +173,8 @@ def get_db():
             db.close()
         except Exception as cleanup_error:
             logger.error(f"Error closing database (ignored): {cleanup_error}")
-            # Swallow the error - NEVER let cleanup crash
             pass
+
 
 def get_current_user_optional(
     db: Session = Depends(get_db),
