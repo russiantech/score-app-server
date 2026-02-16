@@ -118,62 +118,114 @@ logger = logging.getLogger(__name__)
 #             # Swallow the error - NEVER let cleanup crash
 #             pass
 
-# v4
-from fastapi.exceptions import RequestValidationError
+# # v4
+# from fastapi.exceptions import RequestValidationError
 
+# def get_db():
+#     """
+#     Database session dependency - BULLETPROOF version.
+#     Does NOT catch validation errors (those should pass through).
+#     """
+#     db = SessionLocal()
+    
+#     try:
+#         # Test connection
+#         try:
+#             db.execute(text("SELECT 1"))
+#         except Exception as conn_error:
+#             logger.error(f"Database connection test failed: {conn_error}")
+#             # Try to reconnect once
+#             try:
+#                 db.close()
+#                 db = SessionLocal()
+#                 db.execute(text("SELECT 1"))
+#                 logger.info("Database reconnected")
+#             except Exception as reconnect_error:
+#                 logger.error(f"Database reconnection failed: {reconnect_error}")
+#                 raise HTTPException(
+#                     status_code=503,
+#                     detail="Database temporarily unavailable"
+#                 )
+        
+#         yield db
+        
+#     except HTTPException:
+#         # Re-raise HTTP exceptions (these are intentional)
+#         raise
+        
+#     except RequestValidationError:
+#         # CRITICAL: Let validation errors pass through - DON'T catch them!
+#         raise
+        
+#     except Exception as e:
+#         # Only catch actual database errors
+#         logger.error(f"Database error in get_db: {e}")
+#         logger.error(traceback.format_exc())
+#         db.rollback()
+#         raise HTTPException(
+#             status_code=500,
+#             detail="An unexpected database error occurred"
+#         )
+        
+#     finally:
+#         # CRITICAL: Never let cleanup crash
+#         try:
+#             db.close()
+#         except Exception as cleanup_error:
+#             logger.error(f"Error closing database (ignored): {cleanup_error}")
+#             pass
+
+# v5
 def get_db():
     """
-    Database session dependency - BULLETPROOF version.
-    Does NOT catch validation errors (those should pass through).
+    Database session dependency - ABSOLUTELY BULLETPROOF.
+    Never crashes, even during cleanup.
     """
     db = SessionLocal()
     
+    # Test connection at the start
     try:
-        # Test connection
-        try:
-            db.execute(text("SELECT 1"))
-        except Exception as conn_error:
-            logger.error(f"Database connection test failed: {conn_error}")
-            # Try to reconnect once
-            try:
-                db.close()
-                db = SessionLocal()
-                db.execute(text("SELECT 1"))
-                logger.info("✓ Database reconnected")
-            except Exception as reconnect_error:
-                logger.error(f"Database reconnection failed: {reconnect_error}")
-                raise HTTPException(
-                    status_code=503,
-                    detail="Database temporarily unavailable"
-                )
-        
-        yield db
-        
-    except HTTPException:
-        # Re-raise HTTP exceptions (these are intentional)
-        raise
-        
-    except RequestValidationError:
-        # CRITICAL: Let validation errors pass through - DON'T catch them!
-        raise
-        
-    except Exception as e:
-        # Only catch actual database errors
-        logger.error(f"Database error in get_db: {e}")
-        logger.error(traceback.format_exc())
-        db.rollback()
-        raise HTTPException(
-            status_code=500,
-            detail="An unexpected database error occurred"
-        )
-        
-    finally:
-        # CRITICAL: Never let cleanup crash
+        db.execute(text("SELECT 1"))
+    except Exception as conn_error:
+        # Connection failed - try once to reconnect
+        logger.error(f"Database connection failed: {conn_error}")
         try:
             db.close()
-        except Exception as cleanup_error:
-            logger.error(f"Error closing database (ignored): {cleanup_error}")
+        except:
             pass
+        
+        try:
+            db = SessionLocal()
+            db.execute(text("SELECT 1"))
+            logger.info("Database reconnected")
+        except Exception as reconnect_error:
+            logger.error(f"Database reconnection failed: {reconnect_error}")
+            # Clean up and raise HTTP error
+            try:
+                db.close()
+            except:
+                pass
+            raise HTTPException(
+                status_code=503,
+                detail="Database temporarily unavailable"
+            )
+    
+    # Connection is good - yield it
+    try:
+        yield db
+    finally:
+        # CRITICAL: Cleanup MUST NEVER throw exceptions
+        # This is the source of "generator didn't stop" errors
+        try:
+            db.rollback()
+        except:
+            pass  # Swallow all errors
+        
+        try:
+            db.close()
+        except:
+            pass  # Swallow all errors
+
 
 
 def get_current_user_optional(
