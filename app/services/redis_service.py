@@ -217,6 +217,12 @@ class RedisService:
                 socket_timeout=10,
                 socket_connect_timeout=10,
                 retry_on_timeout=True,
+                socket_keepalive=True,
+                socket_keepalive_options={
+                1: 1,   # TCP_KEEPIDLE
+                2: 1,   # TCP_KEEPINTVL  
+                3: 3,   # TCP_KEEPCNT
+            },
             )
 
             # Verify connection
@@ -232,10 +238,36 @@ class RedisService:
             logger.error(f"Redis init failed: {e}")
             raise
 
+    # def _get_healthy_client(self) -> Redis:
+    #     """
+    #     Get Redis client with automatic reconnection on stale connections.
+    #     This is the KEY to fixing "Connection closed by server" errors.
+    #     """
+    #     if not self.client:
+    #         raise RuntimeError("Redis client not initialized")
+        
+    #     try:
+    #         # Quick ping to check if connection is alive
+    #         self.client.ping()
+    #         return self.client
+        
+    #     except (RedisConnectionError, ConnectionError, BrokenPipeError) as e:
+    #         logger.warning(f"Redis connection stale ({e}), reconnecting...")
+            
+    #         # Recreate client from pool (pool will handle creating new connection)
+    #         try:
+    #             self.client = Redis(connection_pool=self.pool)
+    #             self.client.ping()
+    #             logger.info(" Redis reconnected successfully")
+    #             return self.client
+            
+    #         except Exception as reconnect_err:
+    #             logger.error(f"  Redis reconnection failed: {reconnect_err}")
+    #             raise
+    
     def _get_healthy_client(self) -> Redis:
         """
-        Get Redis client with automatic reconnection on stale connections.
-        This is the KEY to fixing "Connection closed by server" errors.
+        Get Redis client with reconnection on stale connections.
         """
         if not self.client:
             raise RuntimeError("Redis client not initialized")
@@ -244,21 +276,24 @@ class RedisService:
             # Quick ping to check if connection is alive
             self.client.ping()
             return self.client
-        
+            
         except (RedisConnectionError, ConnectionError, BrokenPipeError) as e:
             logger.warning(f"Redis connection stale ({e}), reconnecting...")
             
-            # Recreate client from pool (pool will handle creating new connection)
+            # Recreate client
             try:
-                self.client = Redis(connection_pool=self.pool)
-                self.client.ping()
-                logger.info(" Redis reconnected successfully")
-                return self.client
-            
+                if hasattr(self, 'connection_string'):
+                    self._initialize_connection(self.connection_string)
+                    logger.info("Redis reconnected successfully")
+                    return self.client
+                else:
+                    raise RuntimeError("Cannot reconnect - connection string not saved")
+                    
             except Exception as reconnect_err:
-                logger.error(f"  Redis reconnection failed: {reconnect_err}")
+                logger.error(f"Redis reconnection failed: {reconnect_err}")
                 raise
-
+        
+        
     def get_client(self) -> Redis:
         """Get Redis client (backward compatibility)"""
         return self._get_healthy_client()

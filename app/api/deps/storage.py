@@ -3,6 +3,7 @@ Redis dependency injection - BULLETPROOF version
 Never crashes, always returns (even if None)
 """
 import logging
+import traceback
 from typing import Generator, Optional
 
 from app.core.config import get_app_config
@@ -42,17 +43,45 @@ def get_redis_instance() -> Optional[RedisService]:
     return _redis_instance
 
 
+# def get_redis_service() -> Generator[Optional[RedisService], None, None]:
+#     """
+#     FastAPI dependency for Redis service.
+#     NEVER crashes - yields None if Redis unavailable.
+    
+#     Usage:
+#         @router.post("/endpoint")
+#         async def endpoint(redis: Optional[RedisService] = Depends(get_redis_service)):
+#             if not redis:
+#                 raise HTTPException(503, "Cache temporarily unavailable")
+#             redis.set("key", "value")
+#     """
+#     redis_service = None
+    
+#     try:
+#         redis_service = get_redis_instance()
+        
+#         # Health check (don't fail if it doesn't work)
+#         if redis_service:
+#             try:
+#                 if not redis_service.ping():
+#                     logger.warning("Redis health check failed")
+#                     redis_service = None
+#             except RedisError as e:
+#                 logger.warning(f"Redis ping failed: {e}")
+#                 redis_service = None
+    
+#     except Exception as e:
+#         logger.error(f"Redis service error: {e}")
+#         redis_service = None
+    
+#     # ALWAYS yield (even if None) - NEVER raise
+#     yield redis_service
+
+# v2
 def get_redis_service() -> Generator[Optional[RedisService], None, None]:
     """
     FastAPI dependency for Redis service.
-    NEVER crashes - yields None if Redis unavailable.
-    
-    Usage:
-        @router.post("/endpoint")
-        async def endpoint(redis: Optional[RedisService] = Depends(get_redis_service)):
-            if not redis:
-                raise HTTPException(503, "Cache temporarily unavailable")
-            redis.set("key", "value")
+    BULLETPROOF - never crashes, even during cleanup.
     """
     redis_service = None
     
@@ -65,16 +94,28 @@ def get_redis_service() -> Generator[Optional[RedisService], None, None]:
                 if not redis_service.ping():
                     logger.warning("Redis health check failed")
                     redis_service = None
-            except RedisError as e:
+            except Exception as e:
                 logger.warning(f"Redis ping failed: {e}")
                 redis_service = None
-    
+        
+        # ALWAYS yield (even if None)
+        yield redis_service
+
     except Exception as e:
-        logger.error(f"Redis service error: {e}")
-        redis_service = None
+        # Log but don't crash
+        logger.error(f"Redis dependency error: {e}")
+        logger.error(traceback.format_exc())
+        yield None
     
-    # ALWAYS yield (even if None) - NEVER raise
-    yield redis_service
+    finally:
+        # Cleanup - NEVER crash
+        try:
+            if redis_service:
+                # No cleanup needed for redis_service (connection pool managed globally)
+                pass
+        except Exception as cleanup_error:
+            logger.error(f"Redis cleanup error (ignored): {cleanup_error}")
+            pass
 
 
 def close_redis():

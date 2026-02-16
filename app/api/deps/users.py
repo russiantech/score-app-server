@@ -2,6 +2,7 @@
 
 # v2
 import logging
+import traceback
 from typing import Optional
 from fastapi import Depends, HTTPException, status, Cookie
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
@@ -25,40 +26,97 @@ logger = logging.getLogger(__name__)
 #     finally:
 #         db.close()
 
+# v2
+# def get_db():
+#     """
+#     Database session dependency.
+#     NEVER crashes - auto-retries once on failure.
+#     """
+#     db = SessionLocal()
+#     try:
+#         # Test connection
+#         db.execute(text("SELECT 1"))
+#         yield db
+#     except Exception as e:
+#         logger.error(f"Database connection error: {e}")
+#         db.rollback()
+        
+#         # Try to reconnect once
+#         try:
+#             db.close()
+#             db = SessionLocal()
+#             db.execute(text("SELECT 1"))
+#             logger.info("Database reconnected successfully")
+#             yield db
+#         except Exception as e2:
+#             logger.error(f"Database reconnection failed: {e2}")
+#             # Raise HTTP error instead of crashing
+#             raise HTTPException(
+#                 status_code=503,
+#                 detail="Database temporarily unavailable. Please try again in a moment."
+#             )
+#     finally:
+#         try:
+#             db.close()
+#         except Exception as e:
+#             logger.error(f"Error closing database: {e}")
+
+# v3
 def get_db():
     """
-    Database session dependency.
-    NEVER crashes - auto-retries once on failure.
+    Database session dependency - BULLETPROOF version.
+    NEVER crashes, even during cleanup.
     """
     db = SessionLocal()
+    
     try:
         # Test connection
-        db.execute(text("SELECT 1"))
-        yield db
-    except Exception as e:
-        logger.error(f"Database connection error: {e}")
-        db.rollback()
-        
-        # Try to reconnect once
         try:
-            db.close()
-            db = SessionLocal()
             db.execute(text("SELECT 1"))
-            logger.info("Database reconnected successfully")
-            yield db
-        except Exception as e2:
-            logger.error(f"Database reconnection failed: {e2}")
-            # Raise HTTP error instead of crashing
-            raise HTTPException(
-                status_code=503,
-                detail="Database temporarily unavailable. Please try again in a moment."
-            )
+        except Exception as conn_error:
+            logger.error(f"Database connection test failed: {conn_error}")
+            # Try to reconnect once
+            try:
+                db.close()
+                db = SessionLocal()
+                db.execute(text("SELECT 1"))
+                logger.info("Database reconnected")
+            except Exception as reconnect_error:
+                logger.error(f"Database reconnection failed: {reconnect_error}")
+                # Don't crash - raise HTTP error
+                raise HTTPException(
+                    status_code=503,
+                    detail="Database temporarily unavailable"
+                )
+        
+        yield db
+        
+    except HTTPException:
+        # Re-raise HTTP exceptions (these are intentional)
+        raise
+        
+    except Exception as e:
+        # Log any other exception but DON'T crash
+        logger.error(f"Unexpected error in get_db: {e}")
+        logger.error(traceback.format_exc())
+        # Rollback to be safe
+        try:
+            db.rollback()
+        except:
+            pass
+        raise HTTPException(
+            status_code=500,
+            detail="An unexpected database error occurred"
+        )
+        
     finally:
+        # CRITICAL: Never let cleanup crash
         try:
             db.close()
-        except Exception as e:
-            logger.error(f"⚠ Error closing database: {e}")
-
+        except Exception as cleanup_error:
+            logger.error(f"Error closing database (ignored): {cleanup_error}")
+            # Swallow the error - NEVER let cleanup crash
+            pass
 
 def get_current_user_optional(
     db: Session = Depends(get_db),
