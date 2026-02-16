@@ -176,56 +176,68 @@ logger = logging.getLogger(__name__)
 #             pass
 
 # v5
-def get_db():
-    """
-    Database session dependency - ABSOLUTELY BULLETPROOF.
-    Never crashes, even during cleanup.
-    """
-    db = SessionLocal()
+# def get_db():
+#     """
+#     Database session dependency - ABSOLUTELY BULLETPROOF.
+#     Never crashes, even during cleanup.
+#     """
+#     db = SessionLocal()
     
-    # Test connection at the start
+#     # Test connection at the start
+#     try:
+#         db.execute(text("SELECT 1"))
+#     except Exception as conn_error:
+#         # Connection failed - try once to reconnect
+#         logger.error(f"Database connection failed: {conn_error}")
+#         try:
+#             db.close()
+#         except:
+#             pass
+        
+#         try:
+#             db = SessionLocal()
+#             db.execute(text("SELECT 1"))
+#             logger.info("Database reconnected")
+#         except Exception as reconnect_error:
+#             logger.error(f"Database reconnection failed: {reconnect_error}")
+#             # Clean up and raise HTTP error
+#             try:
+#                 db.close()
+#             except:
+#                 pass
+#             raise HTTPException(
+#                 status_code=503,
+#                 detail="Database temporarily unavailable"
+#             )
+    
+#     # Connection is good - yield it
+#     try:
+#         yield db
+#     finally:
+#         # CRITICAL: Cleanup MUST NEVER throw exceptions
+#         # This is the source of "generator didn't stop" errors
+#         try:
+#             db.rollback()
+#         except:
+#             pass  # Swallow all errors
+        
+#         try:
+#             db.close()
+#         except:
+#             pass  # Swallow all errors
+
+# v6 - simple
+def get_db():
+    """Database session dependency - ultra-simple, can't crash."""
+    db = SessionLocal()
     try:
-        db.execute(text("SELECT 1"))
-    except Exception as conn_error:
-        # Connection failed - try once to reconnect
-        logger.error(f"Database connection failed: {conn_error}")
+        yield db
+    finally:
+        # Ultra-safe cleanup - swallow ALL exceptions
         try:
             db.close()
         except:
             pass
-        
-        try:
-            db = SessionLocal()
-            db.execute(text("SELECT 1"))
-            logger.info("Database reconnected")
-        except Exception as reconnect_error:
-            logger.error(f"Database reconnection failed: {reconnect_error}")
-            # Clean up and raise HTTP error
-            try:
-                db.close()
-            except:
-                pass
-            raise HTTPException(
-                status_code=503,
-                detail="Database temporarily unavailable"
-            )
-    
-    # Connection is good - yield it
-    try:
-        yield db
-    finally:
-        # CRITICAL: Cleanup MUST NEVER throw exceptions
-        # This is the source of "generator didn't stop" errors
-        try:
-            db.rollback()
-        except:
-            pass  # Swallow all errors
-        
-        try:
-            db.close()
-        except:
-            pass  # Swallow all errors
-
 
 
 def get_current_user_optional(
