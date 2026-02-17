@@ -77,45 +77,55 @@ def get_redis_instance() -> Optional[RedisService]:
 #     # ALWAYS yield (even if None) - NEVER raise
 #     yield redis_service
 
-# v2
-def get_redis_service() -> Generator[Optional[RedisService], None, None]:
-    """
-    FastAPI dependency for Redis service.
-    BULLETPROOF - never crashes, even during cleanup.
-    """
-    redis_service = None
+# # v2
+# def get_redis_service() -> Generator[Optional[RedisService], None, None]:
+#     """
+#     FastAPI dependency for Redis service.
+#     BULLETPROOF - never crashes, even during cleanup.
+#     """
+#     redis_service = None
     
-    try:
-        redis_service = get_redis_instance()
+#     try:
+#         redis_service = get_redis_instance()
         
-        # Health check (don't fail if it doesn't work)
-        if redis_service:
-            try:
-                if not redis_service.ping():
-                    logger.warning("Redis health check failed")
-                    redis_service = None
-            except Exception as e:
-                logger.warning(f"Redis ping failed: {e}")
-                redis_service = None
+#         # Health check (don't fail if it doesn't work)
+#         if redis_service:
+#             try:
+#                 if not redis_service.ping():
+#                     logger.warning("Redis health check failed")
+#                     redis_service = None
+#             except Exception as e:
+#                 logger.warning(f"Redis ping failed: {e}")
+#                 redis_service = None
         
-        # ALWAYS yield (even if None)
-        yield redis_service
+#         # ALWAYS yield (even if None)
+#         yield redis_service
 
-    except Exception as e:
-        # Log but don't crash
-        logger.error(f"Redis dependency error: {e}")
-        logger.error(traceback.format_exc())
-        yield None
+#     except Exception as e:
+#         # Log but don't crash
+#         logger.error(f"Redis dependency error: {e}")
+#         logger.error(traceback.format_exc())
+#         yield None
     
-    finally:
-        # Cleanup - NEVER crash
-        try:
-            if redis_service:
-                # No cleanup needed for redis_service (connection pool managed globally)
-                pass
-        except Exception as cleanup_error:
-            logger.error(f"Redis cleanup error (ignored): {cleanup_error}")
-            pass
+#     finally:
+#         # Cleanup - NEVER crash
+#         try:
+#             if redis_service:
+#                 # No cleanup needed for redis_service (connection pool managed globally)
+#                 pass
+#         except Exception as cleanup_error:
+#             logger.error(f"Redis cleanup error (ignored): {cleanup_error}")
+#             pass
+
+# v3
+def get_redis_service() -> Optional[RedisService]:
+    try:
+        redis = get_redis_instance()
+        if redis and redis.ping():
+            return redis
+        return None
+    except Exception:
+        return None
 
 
 def close_redis():
