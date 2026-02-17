@@ -67,7 +67,7 @@ async def signup(
                     detail="Too many signup attempts. Please try again later."
                 )
         else:
-            logger.warning(f"⚠ Rate limiting skipped (Redis unavailable) for signup from {client_ip}")
+            logger.warning(f"Rate limiting skipped (Redis unavailable) for signup from {client_ip, redis}")
         
         # Check for existing credentials
         existing_user = db.scalar(
@@ -495,7 +495,7 @@ async def forgot_password(
             limit=5
         )
     else:
-        logger.warning(f"⚠ Rate limiting skipped for forgot-password from {client_ip}")
+        logger.warning(f"Rate limiting skipped for forgot-password from {client_ip}")
 
     user = db.scalar(select(User).where(User.email == data.email.lower()))
 
@@ -522,7 +522,7 @@ async def forgot_password(
         
         logger.info(f"Reset code stored: {reset_code}")
     else:
-        logger.error("⚠ Cannot store reset code - Redis unavailable")
+        logger.error("Cannot store reset code - Redis unavailable")
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Service temporarily unavailable. Please try again."
