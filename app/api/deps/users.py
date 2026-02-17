@@ -18,13 +18,13 @@ security = HTTPBearer(auto_error=False)
 
 logger = logging.getLogger(__name__)
 
-# def get_db():
-#     """Database session dependency."""
-#     db = SessionLocal()
-#     try:
-#         yield db
-#     finally:
-#         db.close()
+async def get_db():
+    """Database session dependency."""
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
 
 # v2
 # def get_db():
@@ -227,17 +227,17 @@ logger = logging.getLogger(__name__)
 #             pass  # Swallow all errors
 
 # v6 - simple
-def get_db():
-    """Database session dependency - ultra-simple, can't crash."""
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        # Ultra-safe cleanup - swallow ALL exceptions
-        try:
-            db.close()
-        except:
-            pass
+# def get_db():
+#     """Database session dependency - ultra-simple, can't crash."""
+#     db = SessionLocal()
+#     try:
+#         yield db
+#     finally:
+#         # Ultra-safe cleanup - swallow ALL exceptions
+#         try:
+#             db.close()
+#         except:
+#             pass
 
 
 def get_current_user_optional(
