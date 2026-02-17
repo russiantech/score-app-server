@@ -45,29 +45,32 @@ async def signup(
     data: SignupSchema,
     request: Request,
     db: Session = Depends(get_db),
-    redis: Optional[RedisService] = Depends(get_redis_service),  # Use dependency
+    # redis: RedisService = Depends(get_redis_service),
 ) -> dict:
     """
     Step 1: Initiate signup process
+    - Validates user data
+    - Checks for existing credentials
+    - Generates and sends verification codes
+    - Stores pending signup data in Redis
+    
+    Returns signup token for verification step.
     """
     try:
         client_ip = get_client_ip(request)
+        redis = get_redis_instance()
+        # Rate limiting
+        _, allowed = redis.increment_rate_limit(
+            f"signup_initiate:{client_ip}",
+            window=3600,
+            limit=50
+        )
         
-        # Rate limiting (skip if Redis unavailable)
-        if redis:
-            _, allowed = redis.increment_rate_limit(
-                f"signup_initiate:{client_ip}",
-                window=3600,
-                limit=50
+        if not allowed:
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail="Too many signup attempts. Please try again later."
             )
-            
-            if not allowed:
-                raise HTTPException(
-                    status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                    detail="Too many signup attempts. Please try again later."
-                )
-        else:
-            logger.warning(f"Rate limiting skipped (Redis unavailable) for signup from {client_ip, redis}")
         
         # Check for existing credentials
         existing_user = db.scalar(
@@ -108,7 +111,7 @@ async def signup(
         phone_code = generate_secure_code(6)
         signup_token = secrets.token_urlsafe(32)
         
-        # Store signup data in Redis (or fail gracefully)
+        # Store signup data in Redis
         signup_data = {
             "username": data.username,
             "email": data.email,
@@ -122,13 +125,6 @@ async def signup(
         }
         
         logger.info(f"Sign up: {signup_data}")
-        
-        # Check if Redis is available
-        if not redis:
-            raise HTTPException(
-                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail="Service temporarily unavailable. Please try again in a moment."
-            )
         
         redis_key = f"signup_pending:{signup_token}"
         if not redis.set(redis_key, signup_data, expiry=600):
@@ -179,27 +175,23 @@ async def signup(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An error occurred during signup"
         )
-        
+
+
 @router.post("/signup/verify")
 async def verify_signup(
     data: VerifySignupSchema,
     request: Request,
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
-    redis: Optional[RedisService] = Depends(get_redis_service),  # Use dependency
+    # redis: RedisService = Depends(get_redis_service),
 ) -> dict:
     """
     Step 2: Verify codes and create user account
+    At least one verification (email OR phone) required.
     """
     try:
         client_ip = get_client_ip(request)
-        
-        # Check if Redis is available (required for verification)
-        if not redis:
-            raise HTTPException(
-                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail="Service temporarily unavailable. Please try again."
-            )
+        redis = get_redis_instance()
         
         # Rate limiting
         _, allowed = redis.increment_rate_limit(
@@ -337,18 +329,12 @@ async def verify_signup(
 async def resend_verification(
     data: ResendVerificationSchema,
     request: Request,
-    redis: Optional[RedisService] = Depends(get_redis_service),  # Use dependency
+    # redis: RedisService = Depends(get_redis_service),
 ) -> dict:
     """Resend verification code for email or phone"""
     try:
         client_ip = get_client_ip(request)
-        
-        # Check if Redis is available (required)
-        if not redis:
-            raise HTTPException(
-                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail="Service temporarily unavailable. Please try again."
-            )
+        redis = get_redis_instance()
         
         # Rate limiting
         _, allowed = redis.increment_rate_limit(
@@ -482,24 +468,21 @@ async def forgot_password(
     request: Request,
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
-    redis: Optional[RedisService] = Depends(get_redis_service),  # Use dependency
+    # redis: RedisService = Depends(get_redis_service),
 ) -> dict:
     
     client_ip = get_client_ip(request)
+    redis = get_redis_instance()
     
-    # Rate limiting (skip if Redis unavailable)
-    if redis:
-        redis.increment_rate_limit(
-            f"forgot_password:{client_ip}",
-            window=3600,
-            limit=5
-        )
-    else:
-        logger.warning(f"Rate limiting skipped for forgot-password from {client_ip}")
+    redis.increment_rate_limit(
+        f"forgot_password:{client_ip}",
+        window=3600,
+        limit=5
+    )
 
     user = db.scalar(select(User).where(User.email == data.email.lower()))
 
-    # Always return success (security best practice)
+    # Always return success
     if not user or not user.is_active:
         return api_response(
             success=True,
@@ -508,25 +491,31 @@ async def forgot_password(
 
     reset_code = generate_secure_code(6)
     
-    # Store reset data in Redis if available
-    if redis:
-        reset_data = {
-            "user_id": str(user.id),
-            "email": user.email,
-            "username": user.username,
-            "created_at": datetime.now(timezone.utc).isoformat()
-        }
-        
-        redis_key = f"password_reset_code:{reset_code}"
-        redis.set(redis_key, reset_data, expiry=900)  # 15 minutes
-        
-        logger.info(f"Reset code stored: {reset_code}")
-    else:
-        logger.error("Cannot store reset code - Redis unavailable")
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Service temporarily unavailable. Please try again."
-        )
+    # 
+    # Store reset data in Redis (15 minutes expiry)
+    reset_data = {
+        "user_id": str(user.id),
+        "email": user.email,
+        "username": user.username,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    redis_key = f"password_reset_code:{reset_code}"
+    #
+    redis.set(redis_key, reset_data, expiry=900)  # 15 minutes
+    
+    # redis.set(
+    #     f"password_reset_code:{reset_code}",
+    #     {
+    #         "user_id": str(user.id),
+    #         "email": user.email,
+    #         "username": user.username,
+    #         "created_at": datetime.now(timezone.utc).isoformat()
+    #     },
+    #     expiry=900
+    # )
+    
+    logger.info(f"Reset data: Code: {reset_code}, Others: {reset_data}")
 
     background_tasks.add_task(
         send_password_reset_email,
@@ -546,19 +535,12 @@ async def reset_password(
     data: ResetPasswordSchema,
     request: Request,
     db: Session = Depends(get_db),
-    redis: Optional[RedisService] = Depends(get_redis_service),  # Use dependency
+    # redis: RedisService = Depends(get_redis_service),
 ) -> dict:
     logger.info(f"Reset password data: {data}")
     client_ip = get_client_ip(request)
+    redis = get_redis_instance()
     
-    # Check if Redis is available (required)
-    if not redis:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Service temporarily unavailable. Please try again."
-        )
-    
-    # Rate limiting
     redis.increment_rate_limit(
         f"reset_password:{client_ip}",
         window=300,
@@ -590,7 +572,6 @@ async def reset_password(
         success=True,
         message="Password reset successful. You can now sign in."
     )
-
 
 
 # Removed: /reset-password/verify-token endpoint (no longer needed with code-based approach)
