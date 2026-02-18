@@ -35,24 +35,55 @@ class RedisService:
         if connection_string:
             self._initialize_connection(connection_string)
 
-    def _initialize_connection(self, connection_string: str):
-        """Initialize Redis from connection string - Upstash-compatible"""
-        try:
-            parsed = urlparse(connection_string)
+    # def _initialize_connection(self, connection_string: str):
+    #     """Initialize Redis from connection string - Upstash-compatible"""
+    #     try:
+    #         parsed = urlparse(connection_string)
             
-            # # Upstash-compatible settings (no health_check_interval!)
+    #         # # Upstash-compatible settings (no health_check_interval!)
         
+    #         self.client = Redis(connection_pool=self.pool)
+            
+    #         # Verify connection
+    #         self.client.ping()
+    #         logger.info(
+    #             f"Redis connected to {parsed.hostname}:{parsed.port} "
+    #             f"(SSL: {parsed.scheme == 'rediss'})"
+    #         )
+            
+    #     except Exception as e:
+    #         logger.error(f"Redis init failed: {e}")
+    #         raise
+
+    
+    def _initialize_connection(self, connection_string: str):
+        """Initialize Redis from connection string - Upstash-compatible."""
+        try:
+            # Create connection pool from URL
+            self.pool = ConnectionPool.from_url(
+                connection_string,
+                decode_responses=True,
+                socket_timeout=10,
+                socket_connect_timeout=10,
+                retry_on_timeout=True,
+                max_connections=10,
+            )
+            
+            # Create client from pool
             self.client = Redis(connection_pool=self.pool)
             
             # Verify connection
             self.client.ping()
+            
+            # Log success
+            parsed = urlparse(connection_string)
             logger.info(
-                f"Redis connected to {parsed.hostname}:{parsed.port} "
+                f"✓ Redis connected to {parsed.hostname}:{parsed.port} "
                 f"(SSL: {parsed.scheme == 'rediss'})"
             )
             
         except Exception as e:
-            logger.error(f"Redis init failed: {e}")
+            logger.error(f"✗ Redis init failed: {e}")
             raise
 
     def _get_healthy_client(self) -> Redis:
