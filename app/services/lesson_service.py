@@ -1,3 +1,4 @@
+import logging
 from typing import Optional, List, Tuple
 from uuid import UUID
 from datetime import date, datetime
@@ -10,6 +11,8 @@ from app.models.modules import Module
 from app.models.user import User
 from app.schemas.lesson import LessonCreate, LessonFilters, LessonUpdate, LessonStatus
 from app.models.tutors import CourseTutor, CourseTutorStatus
+
+logger = logging.getLogger(__name__)
 
 def update_lesson_status(lesson: Lesson):
     """
