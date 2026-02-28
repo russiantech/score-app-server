@@ -30,10 +30,13 @@ class LessonCreate(LessonBase):
     date: Date  # Required on creation
 
     model_config = {
+        "use_enum_values": True,  # ← ADD THIS
         "json_encoders": {
             Date: lambda v: v.isoformat() if v else None,
         }
     }
+
+
 
 
 class LessonUpdate(BaseModel):
@@ -49,12 +52,12 @@ class LessonUpdate(BaseModel):
     status: Optional[LessonStatus] = None
 
     model_config = {
+        "use_enum_values": True,  # ← ADD THIS
         "json_encoders": {
             Date: lambda v: v.isoformat() if v else None,
             datetime: lambda v: v.isoformat() if v else None,
         }
     }
-
 
 class LessonOut(BaseModel):
     """Schema for returning a lesson"""
