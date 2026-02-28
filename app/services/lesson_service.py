@@ -68,10 +68,15 @@ def create_lesson(db: Session, data: LessonCreate, user_id: UUID) -> Lesson:
         db.commit()
         db.refresh(lesson)
         return lesson
+    
+    # except Exception as e:
+    #     db.rollback()
+    #     raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to create lesson: {str(e)}")
+    
     except Exception as e:
         db.rollback()
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to create lesson: {str(e)}")
-
+        logger.exception(f"Lesson patch failed: {str(e)}")  # logs full stack trace
+        raise e
 
 def update_lesson(db: Session, lesson_id: UUID, data: LessonUpdate, user_id: UUID, check_permission: bool = True) -> Lesson:
     """Update a lesson with partial update support"""
