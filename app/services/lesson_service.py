@@ -126,6 +126,13 @@ def create_lesson(db: Session, data: LessonCreate, user_id: UUID) -> Lesson:
             )
         
         # Create lesson with explicit field mapping (BULLETPROOF ENUM HANDLING)
+        # DEBUG: Log what we're actually sending to DB
+        logger.error(f"DEBUG STATUS CHECK: type={type(data.status)}, value={data.status}")
+        if hasattr(data.status, 'value'):
+            logger.error(f"DEBUG: Has .value attribute: {data.status.value}")
+        else:
+            logger.error(f"DEBUG: No .value attribute, using as-is")
+    
         lesson = Lesson(
             module_id=data.module_id,
             title=data.title,
@@ -134,7 +141,8 @@ def create_lesson(db: Session, data: LessonCreate, user_id: UUID) -> Lesson:
             description=data.description,
             assessment_max=data.assessment_max,
             assignment_max=data.assignment_max,
-            status=data.status.value if hasattr(data.status, 'value') else data.status,  # Force enum value
+            # status=data.status.value if hasattr(data.status, 'value') else data.status,  # Force enum value
+            status=data.status,
             created_by=user_id
         )
         
