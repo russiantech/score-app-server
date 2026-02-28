@@ -60,7 +60,8 @@ def create_lesson(db: Session, data: LessonCreate, user_id: UUID) -> Lesson:
     if existing:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Lesson order {data.order} already exists")
 
-    lesson = Lesson(**data.model_dump())
+    # lesson = Lesson(**data.model_dump())
+    lesson = Lesson(**data.model_dump(mode='python', exclude_unset=True))
 
     try:
         db.add(lesson)
@@ -87,7 +88,7 @@ def update_lesson(db: Session, lesson_id: UUID, data: LessonUpdate, user_id: UUI
         # if not user.has_role('admin') and not (user.has_role('tutor') and user in lesson.module.course.tutors_assigned):
         #     raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to update this lesson")
 
-        if not user.has_role('admin'):
+        if not user.has_role('admin', 'tutor', 'dev'):
 
             is_assigned = db.query(CourseTutor).filter(
                 CourseTutor.course_id == lesson.module.course_id,

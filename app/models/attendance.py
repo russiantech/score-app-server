@@ -1,33 +1,3 @@
-# # app/models/attendance.py
-# from sqlalchemy import Column, Integer, Date, DateTime, ForeignKey, Enum as SQLEnum, UniqueConstraint
-# from sqlalchemy.orm import relationship
-# from sqlalchemy.sql import func
-# import enum
-
-# from app.db.base_class import Base
-# from app.db.mixins import TimestampMixin
-
-# class AttendanceStatus(str, enum.Enum):
-#     PRESENT = "present"
-#     ABSENT = "absent"
-#     LATE = "late"
-#     EXCUSED = "excused"
-
-# class Attendance(TimestampMixin, Base):
-#     __tablename__ = "attendance"
-#     __table_args__ = (UniqueConstraint('enrollment_id', 'lesson_id', 'date', name='uq_attendance'),)
-    
-#     id = Column(Integer, primary_key=True, index=True)
-#     enrollment_id = Column(Integer, ForeignKey("enrollments.id"), nullable=False)
-#     lesson_id = Column(Integer, ForeignKey("lessons.id"), nullable=False)
-#     status = Column(SQLEnum(AttendanceStatus), nullable=False)
-#     date = Column(Date, nullable=False, index=True)
-#     created_at = Column(DateTime(timezone=True), server_default=func.now())
-#     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
-    
-#     # Relationships
-#     enrollment = relationship("Enrollment", back_populates="attendance")
-#     lesson = relationship("Lesson", back_populates="attendance")
 
 # v2
 

@@ -17,6 +17,10 @@ class LessonBase(BaseModel):
     assignment_max: Optional[float] = Field(None, ge=0)
 
     status: LessonStatus = Field(default=LessonStatus.UPCOMING)
+    
+    model_config = {
+        "use_enum_values": True
+    }
 
 
 class LessonCreate(LessonBase):
