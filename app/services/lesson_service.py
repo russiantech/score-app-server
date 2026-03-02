@@ -22,24 +22,24 @@ from app.models.tutors import CourseTutor, CourseTutorStatus
 logger = logging.getLogger(__name__)
 
 
-def update_lesson_status(lesson: Lesson) -> None:
-    """
-    Auto-update lesson status based on date and attendance completion.
+# def update_lesson_status(lesson: Lesson) -> None:
+#     """
+#     Auto-update lesson status based on date and attendance completion.
     
-    Business Rules:
-    - Future lessons: UPCOMING
-    - Completed attendance: COMPLETED  
-    - Otherwise: ONGOING
-    """
-    today = date.today()
+#     Business Rules:
+#     - Future lessons: UPCOMING
+#     - Completed attendance: COMPLETED  
+#     - Otherwise: ONGOING
+#     """
+#     today = date.today()
 
-    if lesson.date and lesson.date > today:
-        lesson.status = LessonStatus.UPCOMING
-    elif (getattr(lesson, 'attendance_count', 0) and 
-          getattr(lesson, 'present_count', 0) >= lesson.attendance_count):
-        lesson.status = LessonStatus.COMPLETED
-    else:
-        lesson.status = LessonStatus.ONGOING
+#     if lesson.date and lesson.date > today:
+#         lesson.status = LessonStatus.UPCOMING
+#     elif (getattr(lesson, 'attendance_count', 0) and 
+#           getattr(lesson, 'present_count', 0) >= lesson.attendance_count):
+#         lesson.status = LessonStatus.COMPLETED
+#     else:
+#         lesson.status = LessonStatus.ONGOING
 
 
 def _check_lesson_permission(
@@ -141,8 +141,8 @@ def create_lesson(db: Session, data: LessonCreate, user_id: UUID) -> Lesson:
             description=data.description,
             assessment_max=data.assessment_max,
             assignment_max=data.assignment_max,
-            # status=data.status.value if hasattr(data.status, 'value') else data.status,  # Force enum value
-            status=data.status,
+            status=data.status.value if hasattr(data.status, 'value') else data.status,  # Force enum value
+            # status=data.status,
             created_by=user_id
         )
         

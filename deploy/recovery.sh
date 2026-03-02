@@ -1,7 +1,7 @@
 #!/bin/bash
 
 APP_DIR="/home/simpdinr/api-studentscores.simplylovely.ng"
-CONTROL="$APP_DIR/control.sh"
+CONTROL="$APP_DIR/deploy/control.sh"
 LOG_FILE="$APP_DIR/deploy/recovery.log"
 
 # Create deploy directory if it doesn't exist
