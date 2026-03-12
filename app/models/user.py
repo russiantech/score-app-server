@@ -847,6 +847,19 @@ class User(UUIDMixin, TimestampMixin, Base):
     # ========================================================================
     # SERIALIZATION
     # ========================================================================
+    @property
+    def profile_picture(self) -> str | None:
+        """
+        Return the URL of the most recent non-deleted avatar.
+        self.avatar is List[UserAvatar] ordered by created_at asc.
+        """
+        if not self.avatar:
+            return None
+        for av in reversed(self.avatar):
+            if not av.is_deleted:
+                return av.file_path
+        return None
+
     def get_summary(self) -> dict:
         """
         Get user summary for API responses.

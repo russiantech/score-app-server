@@ -1,186 +1,3 @@
-# from sqlalchemy.orm import Session
-# from fastapi import HTTPException
-# from app.models.student import Student
-# from app.schemas.student import StudentCreate
-
-# def create_student(db: Session, data: StudentCreate):
-#     student = Student(**data.dict())
-#     db.add(student)
-#     db.commit()
-#     db.refresh(student)
-#     return student
-
-# def get_student(db: Session, student_id):
-#     student = db.query(Student).filter(Student.id == student_id).first()
-#     if not student:
-#         raise HTTPException(404, "Student not found")
-#     return student
-
-# def list_students(db: Session):
-#     return db.query(Student).all()
-
-
-# # v2
-# # ============================================================================
-# # SERVICES - Part 9: Student Service
-# # FILE: app/services/student_service.py
-# # ============================================================================
-
-# from sqlalchemy.orm import Session
-# from uuid import UUID
-# from app.models import User, Enrollment, Course, Module, Lesson, LessonScore, Attendance
-# from app.services.score_service import calculate_grade
-
-# def get_dashboard(db: Session, student_id: UUID) -> dict:
-#     """Get student dashboard data"""
-#     student = db.query(User).filter(User.id == student_id).first()
-    
-#     enrollments = db.query(Enrollment).filter(
-#         Enrollment.student_id == student_id
-#     ).all()
-    
-#     courses = []
-#     for enrollment in enrollments:
-#         course = enrollment.course
-        
-#         # Calculate progress and grade
-#         progress = calculate_course_progress(db, student_id, course.id)
-#         grade = calculate_course_grade(db, student_id, course.id)
-        
-#         courses.append({
-#             "id": course.id,
-#             "name": course.title,
-#             "code": course.code,
-#             "progress": progress,
-#             "grade": grade,
-#             "tutor_name": get_course_tutor_name(db, course.id)
-#         })
-    
-#     return {
-#         "student_id": student_id,
-#         "student_name": student.names if student else "Unknown",
-#         "student_id_number": str(student_id)[:8].upper() if student else "",
-#         "total_courses": len(courses),
-#         "courses": courses
-#     }
-
-# def get_student_courses(db: Session, student_id: UUID) -> list:
-#     """Get student's enrolled courses"""
-#     enrollments = db.query(Enrollment).filter(
-#         Enrollment.student_id == student_id
-#     ).all()
-    
-#     return [enrollment.course for enrollment in enrollments]
-
-# def get_course_performance(db: Session, student_id: UUID, course_id: UUID) -> dict:
-#     """Get student's detailed performance in a course"""
-#     course = db.query(Course).filter(Course.id == course_id).first()
-#     modules = db.query(Module).filter(Module.course_id == course_id).all()
-    
-#     module_performances = []
-    
-#     for module in modules:
-#         lessons = db.query(Lesson).filter(Lesson.module_id == module.id).all()
-        
-#         lesson_performances = []
-#         for lesson in lessons:
-#             # Get score
-#             score = db.query(LessonScore).filter(
-#                 LessonScore.lesson_id == lesson.id,
-#                 LessonScore.student_id == student_id
-#             ).first()
-            
-#             # Get attendance
-#             attendance = db.query(Attendance).filter(
-#                 Attendance.lesson_id == lesson.id,
-#                 Attendance.student_id == student_id
-#             ).first()
-            
-#             lesson_performances.append({
-#                 "lesson_id": lesson.id,
-#                 "lesson_name": lesson.name,
-#                 "lesson_number": lesson.number,
-#                 "lesson_date": str(lesson.date),
-#                 "attended": attendance.is_present if attendance else False,
-#                 "assessment_score": score.assessment_score if score else None,
-#                 "assignment_score": score.assignment_score if score else None,
-#                 "total_score": score.total_score if score else None,
-#                 "grade": score.grade if score else None
-#             })
-        
-#         module_performances.append({
-#             "module_id": module.id,
-#             "module_name": module.name,
-#             "module_order": module.order,
-#             "lessons": lesson_performances
-#         })
-    
-#     return {
-#         "course_id": course_id,
-#         "course_name": course.title,
-#         "course_code": course.code,
-#         "modules": module_performances
-#     }
-
-# def get_id_card_data(db: Session, student_id: UUID) -> dict:
-#     """Get student ID card data"""
-#     student = db.query(User).filter(User.id == student_id).first()
-    
-#     return {
-#         "student_id": student_id,
-#         "student_name": student.names,
-#         "student_id_number": str(student_id)[:8].upper(),
-#         "email": student.email,
-#         "phone": student.phone,
-#         "enrolled_date": student.created_at
-#     }
-
-# def calculate_course_progress(db: Session, student_id: UUID, course_id: UUID) -> float:
-#     """Calculate student's progress in a course"""
-#     # Get total lessons
-#     total_lessons = db.query(Lesson).join(Module).filter(
-#         Module.course_id == course_id
-#     ).count()
-    
-#     if total_lessons == 0:
-#         return 0.0
-    
-#     # Get completed lessons (where score exists)
-#     completed = db.query(LessonScore).join(Lesson).join(Module).filter(
-#         Module.course_id == course_id,
-#         LessonScore.student_id == student_id
-#     ).count()
-    
-#     return round((completed / total_lessons) * 100, 1)
-
-# def calculate_course_grade(db: Session, student_id: UUID, course_id: UUID) -> str:
-#     """Calculate student's overall grade in a course"""
-#     scores = db.query(LessonScore).join(Lesson).join(Module).filter(
-#         Module.course_id == course_id,
-#         LessonScore.student_id == student_id
-#     ).all()
-    
-#     if not scores:
-#         return "N/A"
-    
-#     avg_percentage = sum(score.percentage for score in scores) / len(scores)
-#     return calculate_grade(avg_percentage)
-
-# def get_course_tutor_name(db: Session, course_id: UUID) -> str:
-#     """Get tutor name for a course"""
-#     course = db.query(Course).filter(Course.id == course_id).first()
-#     if not course or not course.instructor_ids:
-#         return "Not Assigned"
-    
-#     tutor = db.query(User).filter(
-#         User.id == UUID(course.instructor_ids[0])
-#     ).first()
-    
-#     return tutor.names if tutor else "Not Assigned"
-
-
-
-
 # v3
 # ============================================================================
 # SERVICES - Part 9: Student Service (CORRECTED)
@@ -211,61 +28,6 @@ def calculate_grade(percentage: float) -> str:
         return "D"
     else:
         return "F"
-
-# def get_dashboard(db: Session, student_id: UUID) -> Dict[str, Any]:
-#     """Get student dashboard data"""
-#     student = db.query(User).filter(User.id == student_id).first()
-#     if not student:
-#         raise HTTPException(
-#             status_code=status.HTTP_404_NOT_FOUND,
-#             detail="Student not found"
-#         )
-    
-#     # Check if user is a student
-#     if not any(role.name == 'student' for role in student.roles):
-#         raise HTTPException(
-#             status_code=status.HTTP_403_FORBIDDEN,
-#             detail="User is not a student"
-#         )
-    
-#     # Get enrollments with courses
-#     enrollments = db.query(Enrollment).filter(
-#         Enrollment.student_id == student_id
-#     ).options(joinedload(Enrollment.course)).all()
-    
-#     courses = []
-#     for enrollment in enrollments:
-#         course = enrollment.course
-        
-#         # Calculate progress and grade
-#         progress = calculate_course_progress(db, student_id, course.id)
-#         grade = calculate_course_grade(db, student_id, course.id)
-        
-#         # Get tutor names
-#         tutor_names = [instructor.names or instructor.username 
-#                       for instructor in course.instructors]
-        
-#         courses.append({
-#             "id": str(course.id),
-#             "title": course.title,
-#             "code": course.code,
-#             "description": course.description,
-#             "progress": progress,
-#             "grade": grade,
-#             "tutor_names": tutor_names if tutor_names else ["Not Assigned"],
-#             "enrollment_date": enrollment.created_at,
-#             "status": getattr(enrollment, 'status', 'active')
-#         })
-    
-#     return {
-#         "student_id": str(student_id),
-#         "student_name": student.names or student.username,
-#         "student_email": student.email,
-#         "student_id_number": str(student_id)[:8].upper(),
-#         "total_courses": len(courses),
-#         "courses": courses
-#     }
-
 
 def get_dashboard(db: Session, student_id: UUID) -> Dict[str, Any]:
     """Get student dashboard data"""
@@ -526,4 +288,171 @@ def calculate_course_grade(db: Session, student_id: UUID, course_id: UUID) -> st
     
     avg_percentage = total_weighted_score / total_weight
     return calculate_grade(avg_percentage)
+
+
+# more--- v2
+
+# ============================================================================
+# SERVICES - ID Card Service
+# FILE: app/services/id_card_service.py
+# ============================================================================
+
+from sqlalchemy.orm import Session, joinedload
+from uuid import UUID
+from typing import Dict, Any, List
+from fastapi import HTTPException, status
+import base64
+from io import BytesIO
+from PIL import Image
+
+from app.models.user import User
+from app.models.enrollment import Enrollment
+
+
+def get_student_id_card_data(db: Session, student_id: UUID) -> Dict[str, Any]:
+    """
+    Get student data and enrolled courses for ID card generation.
+    """
+
+    student = db.query(User).filter(User.id == student_id).first()
+
+    if not student:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Student not found"
+        )
+
+    if not student.has_role("student"):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="User is not a student"
+        )
+
+    enrollments = (
+        db.query(Enrollment)
+        .filter(Enrollment.student_id == student_id)
+        .options(joinedload(Enrollment.course))
+        .all()
+    )
+
+    courses = []
+
+    for enrollment in enrollments:
+        course = enrollment.course
+
+        courses.append({
+            "id": course.id,
+            "title": course.title,
+            "code": course.code,
+            "enrolled_date": enrollment.created_at
+        })
+
+    return {
+        "student": {
+            "id": student.id,
+            "names": student.names if student.names else student.username,
+            "email": student.email,
+            "student_id": student.username or str(student.id)[:8].upper(),
+            "phone": student.phone,
+            "date_of_birth": getattr(student, "date_of_birth", None),
+            "profile_picture": getattr(student, "avatar_url", None)
+        },
+        "courses": courses
+    }
+
+
+def upload_student_photo(db: Session, student_id: UUID, image_bytes: bytes) -> Dict[str, Any]:
+    """
+    Upload and process student ID photo.
+    """
+
+    student = db.query(User).filter(User.id == student_id).first()
+
+    if not student:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Student not found"
+        )
+
+    if len(image_bytes) > 2 * 1024 * 1024:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Photo must be less than 2MB"
+        )
+
+    try:
+        image = Image.open(BytesIO(image_bytes))
+
+        max_size = (600, 600)
+        image.thumbnail(max_size, Image.Resampling.LANCZOS)
+
+        if image.mode in ("RGBA", "P"):
+            image = image.convert("RGB")
+
+        output = BytesIO()
+        image.save(output, format="JPEG", quality=85)
+        output.seek(0)
+
+        encoded = base64.b64encode(output.read()).decode("utf-8")
+        photo_data = f"data:image/jpeg;base64,{encoded}"
+
+        return {
+            "photo_url": photo_data,
+            "student_id": student_id
+        }
+
+    except Exception:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to process photo"
+        )
+
+
+def generate_student_id_card(
+    db: Session,
+    student_id: UUID,
+    course_id: UUID
+) -> Dict[str, Any]:
+    """
+    Generate ID card payload for rendering or PDF export.
+    """
+
+    student = db.query(User).filter(User.id == student_id).first()
+
+    if not student:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Student not found"
+        )
+
+    enrollment = db.query(Enrollment).filter(
+        Enrollment.student_id == student_id,
+        Enrollment.course_id == course_id
+    ).options(joinedload(Enrollment.course)).first()
+
+    if not enrollment:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Enrollment not found"
+        )
+
+    course = enrollment.course
+
+    return {
+        "student": {
+            "name": student.names if student.names else student.username,
+            "student_id": student.username or str(student.id)[:8].upper(),
+            "email": student.email,
+            "phone": student.phone
+        },
+        "course": {
+            "id": course.id,
+            "title": course.title,
+            "code": course.code
+        },
+        
+        "enrollment_date": enrollment.created_at
+    }
+
+
 

@@ -218,51 +218,196 @@ class ConfigLoader:
                 )
             ),
             
+            # hosting_config=HostingConfig(
+            #     domain=self._get_value(
+            #         "APP_DOMAIN", 
+            #         ["hosting_config", "domain"], 
+            #         "localhost"
+            #     ),
+            #     ssl=self._get_value(
+            #         "APP_SSL", 
+            #         ["hosting_config", "ssl"], 
+            #         False, 
+            #         self._to_bool
+            #     ),
+            #     port=self._get_value(
+            #         "APP_PORT", 
+            #         ["hosting_config", "port"], 
+            #         8000, 
+            #         self._to_int
+            #     ),
+            #     use_default_org=self._get_value(
+            #         "APP_USE_DEFAULT_ORG", 
+            #         ["hosting_config", "use_default_org"], 
+            #         True, 
+            #         self._to_bool
+            #     ),
+            #     allowed_origins=self._get_value(
+            #         "APP_ALLOWED_ORIGINS", 
+            #         ["hosting_config", "allowed_origins"], 
+            #         ["http://localhost:3000"], 
+            #         self._to_list
+            #     ),
+            #     allowed_regexp=self._get_value(
+            #         "APP_ALLOWED_REGEXP", 
+            #         ["hosting_config", "allowed_regexp"], 
+            #         ""
+            #     ),
+            #     self_hosted=self._get_value(
+            #         "APP_SELF_HOSTED", 
+            #         ["hosting_config", "self_hosted"], 
+            #         True, 
+            #         self._to_bool
+            #     ),
+            #     api_url=self._get_value(
+            #         "APP_API_URL",
+            #         ["hosting_config", "api_url"],
+            #         "http://localhost:8000"
+            #     ),
+            #     frontend_url=self._get_value(
+            #         "APP_FRONTEND_URL",
+            #         ["hosting_config", "frontend_url"],
+            #         "http://localhost:3000"
+            #     ),
+            #     cookie_config=CookieConfig(
+            #         domain=self._get_value(
+            #             "APP_COOKIE_DOMAIN", 
+            #             ["hosting_config", "cookies_config", "domain"], 
+            #             "localhost"
+            #         ),
+            #         secure=self._get_value(
+            #             "APP_COOKIE_SECURE",
+            #             ["hosting_config", "cookies_config", "secure"],
+            #             False,
+            #             self._to_bool
+            #         ),
+            #         httponly=self._get_value(
+            #             "APP_COOKIE_HTTPONLY",
+            #             ["hosting_config", "cookies_config", "httponly"],
+            #             True,
+            #             self._to_bool
+            #         ),
+            #         samesite=self._get_value(
+            #             "APP_COOKIE_SAMESITE",
+            #             ["hosting_config", "cookies_config", "samesite"],
+            #             "lax"
+            #         ),
+            #         max_age=self._get_value(
+            #             "APP_COOKIE_MAX_AGE",
+            #             ["hosting_config", "cookies_config", "max_age"],
+            #             60 * 60 * 24 * 7,
+            #             self._to_int
+            #         )
+            #     ),
+            #     content_delivery=ContentDeliveryConfig(
+            #         type=self._get_value(
+            #             "APP_CONTENT_DELIVERY_TYPE", 
+            #             ["hosting_config", "content_delivery", "type"], 
+            #             "filesystem"
+            #         ),
+            #         filesystem_base_path=self._get_value(
+            #             "APP_FILESYSTEM_BASE_PATH",
+            #             ["hosting_config", "content_delivery", "filesystem_base_path"],
+            #             "./uploads"
+            #         ),
+            #         max_file_size_mb=self._get_value(
+            #             "APP_MAX_FILE_SIZE_MB",
+            #             ["hosting_config", "content_delivery", "max_file_size_mb"],
+            #             100,
+            #             self._to_int
+            #         ),
+            #         allowed_file_types=self._get_value(
+            #             "APP_ALLOWED_FILE_TYPES",
+            #             ["hosting_config", "content_delivery", "allowed_file_types"],
+            #             ["image/jpeg", "image/png", "image/gif", "application/pdf", "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"],
+            #             self._to_list
+            #         ),
+            #         s3api=S3ApiConfig(
+            #             bucket_name=self._get_value(
+            #                 "APP_S3_API_BUCKET_NAME", 
+            #                 ["hosting_config", "content_delivery", "s3api", "bucket_name"]
+            #             ),
+            #             endpoint_url=self._get_value(
+            #                 "APP_S3_API_ENDPOINT_URL", 
+            #                 ["hosting_config", "content_delivery", "s3api", "endpoint_url"]
+            #             ),
+            #             region=self._get_value(
+            #                 "APP_S3_API_REGION",
+            #                 ["hosting_config", "content_delivery", "s3api", "region"],
+            #                 "us-east-1"
+            #             ),
+            #             access_key_id=self._get_value(
+            #                 "APP_S3_API_ACCESS_KEY_ID",
+            #                 ["hosting_config", "content_delivery", "s3api", "access_key_id"]
+            #             ),
+            #             secret_access_key=self._get_value(
+            #                 "APP_S3_API_SECRET_ACCESS_KEY",
+            #                 ["hosting_config", "content_delivery", "s3api", "secret_access_key"]
+            #             ),
+            #             use_ssl=self._get_value(
+            #                 "APP_S3_API_USE_SSL",
+            #                 ["hosting_config", "content_delivery", "s3api", "use_ssl"],
+            #                 True,
+            #                 self._to_bool
+            #             ),
+            #             signature_version=self._get_value(
+            #                 "APP_S3_API_SIGNATURE_VERSION",
+            #                 ["hosting_config", "content_delivery", "s3api", "signature_version"],
+            #                 "s3v4"
+            #             )
+            #         )
+            #     )
+            # ),
+            
+            # ============================================================
+            # app/core/config/loader.py
+            #
+            # CHANGE: Remove api_url from HostingConfig(...) block entirely.
+            # api_url is now a @computed_field — derived from domain+port+ssl.
+            #
+            # REPLACE your entire hosting_config=HostingConfig(...) block with:
+            # ============================================================
+
             hosting_config=HostingConfig(
                 domain=self._get_value(
-                    "APP_DOMAIN", 
-                    ["hosting_config", "domain"], 
+                    "APP_DOMAIN",
+                    ["hosting_config", "domain"],
                     "localhost"
                 ),
-                ssl=self._get_value(
-                    "APP_SSL", 
-                    ["hosting_config", "ssl"], 
-                    False, 
-                    self._to_bool
-                ),
                 port=self._get_value(
-                    "APP_PORT", 
-                    ["hosting_config", "port"], 
-                    8000, 
+                    "APP_PORT",
+                    ["hosting_config", "port"],
+                    8001,
                     self._to_int
                 ),
+                ssl=self._get_value(
+                    "APP_SSL",
+                    ["hosting_config", "ssl"],
+                    False,
+                    self._to_bool
+                ),
                 use_default_org=self._get_value(
-                    "APP_USE_DEFAULT_ORG", 
-                    ["hosting_config", "use_default_org"], 
-                    True, 
+                    "APP_USE_DEFAULT_ORG",
+                    ["hosting_config", "use_default_org"],
+                    True,
                     self._to_bool
                 ),
                 allowed_origins=self._get_value(
-                    "APP_ALLOWED_ORIGINS", 
-                    ["hosting_config", "allowed_origins"], 
-                    ["http://localhost:3000"], 
+                    "APP_ALLOWED_ORIGINS",
+                    ["hosting_config", "allowed_origins"],
+                    ["http://localhost:3000"],
                     self._to_list
                 ),
                 allowed_regexp=self._get_value(
-                    "APP_ALLOWED_REGEXP", 
-                    ["hosting_config", "allowed_regexp"], 
+                    "APP_ALLOWED_REGEXP",
+                    ["hosting_config", "allowed_regexp"],
                     ""
                 ),
                 self_hosted=self._get_value(
-                    "APP_SELF_HOSTED", 
-                    ["hosting_config", "self_hosted"], 
-                    True, 
+                    "APP_SELF_HOSTED",
+                    ["hosting_config", "self_hosted"],
+                    True,
                     self._to_bool
-                ),
-                api_url=self._get_value(
-                    "APP_API_URL",
-                    ["hosting_config", "api_url"],
-                    "http://localhost:8000"
                 ),
                 frontend_url=self._get_value(
                     "APP_FRONTEND_URL",
@@ -271,8 +416,8 @@ class ConfigLoader:
                 ),
                 cookie_config=CookieConfig(
                     domain=self._get_value(
-                        "APP_COOKIE_DOMAIN", 
-                        ["hosting_config", "cookies_config", "domain"], 
+                        "APP_COOKIE_DOMAIN",
+                        ["hosting_config", "cookies_config", "domain"],
                         "localhost"
                     ),
                     secure=self._get_value(
@@ -301,8 +446,8 @@ class ConfigLoader:
                 ),
                 content_delivery=ContentDeliveryConfig(
                     type=self._get_value(
-                        "APP_CONTENT_DELIVERY_TYPE", 
-                        ["hosting_config", "content_delivery", "type"], 
+                        "APP_CONTENT_DELIVERY_TYPE",
+                        ["hosting_config", "content_delivery", "type"],
                         "filesystem"
                     ),
                     filesystem_base_path=self._get_value(
@@ -319,16 +464,18 @@ class ConfigLoader:
                     allowed_file_types=self._get_value(
                         "APP_ALLOWED_FILE_TYPES",
                         ["hosting_config", "content_delivery", "allowed_file_types"],
-                        ["image/jpeg", "image/png", "image/gif", "application/pdf", "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"],
+                        ["image/jpeg", "image/png", "image/gif", "application/pdf",
+                         "application/msword",
+                         "application/vnd.openxmlformats-officedocument.wordprocessingml.document"],
                         self._to_list
                     ),
                     s3api=S3ApiConfig(
                         bucket_name=self._get_value(
-                            "APP_S3_API_BUCKET_NAME", 
+                            "APP_S3_API_BUCKET_NAME",
                             ["hosting_config", "content_delivery", "s3api", "bucket_name"]
                         ),
                         endpoint_url=self._get_value(
-                            "APP_S3_API_ENDPOINT_URL", 
+                            "APP_S3_API_ENDPOINT_URL",
                             ["hosting_config", "content_delivery", "s3api", "endpoint_url"]
                         ),
                         region=self._get_value(

@@ -30,10 +30,10 @@ logging.basicConfig(
     handlers=[logging.FileHandler("app.log")]  #  CHANGED: Use FileHandler for production
 )
 
-# Silence uvicorn logs (optional, but cleaner for production)
-logging.getLogger("uvicorn").handlers = []
-logging.getLogger("uvicorn.error").handlers = []
-logging.getLogger("uvicorn.access").handlers = []
+# # Silence uvicorn logs (optional, but cleaner for production)
+# logging.getLogger("uvicorn").handlers = []
+# logging.getLogger("uvicorn.error").handlers = []
+# logging.getLogger("uvicorn.access").handlers = []
 
 logger = logging.getLogger(__name__)
 
@@ -57,7 +57,7 @@ async def lifespan(app: FastAPI):
     try:
         from app.api.deps.storage import init_redis_on_startup
         init_redis_on_startup()
-        logger.info(" Redis initialization complete")
+        logger.info("Redis initialization complete")
     except Exception as e:
         logger.error(f" Redis startup failed: {e}")
         logger.info("App will continue - Redis will auto-connect on first use")
@@ -94,6 +94,42 @@ app = FastAPI(
     redoc_url="/redoc",
     openapi_url="/openapi.json"
 )
+
+
+
+# """ 
+# ALLOWING STATIC FILES ACCESSIBLE IN THE PUBLIC URL/ROUTE
+# """
+# ============================================================
+# PATCH 1 — main.py
+# Add StaticFiles mount so /uploads/... URLs are served.
+# Apply after the existing imports block.
+# ============================================================
+
+# ADD to imports (top of file, with the other fastapi imports):
+from fastapi.staticfiles import StaticFiles
+import os
+
+# ADD after `app = FastAPI(...)` and before the middleware section:
+
+# ------------------------------------------------------------------
+# STATIC FILES — serve uploaded media
+# ------------------------------------------------------------------
+_uploads_dir = app_config.hosting_config.content_delivery.filesystem_base_path  # e.g. "./uploads"
+os.makedirs(_uploads_dir, exist_ok=True)  # ensure dir exists on startup
+
+app.mount(
+    "/uploads",
+    StaticFiles(directory=_uploads_dir),
+    name="uploads",
+)
+# That's it. Files saved to ./uploads/avatars/foo.jpg are now
+# reachable at http://localhost:8001/uploads/avatars/foo.jpg
+
+
+
+
+
 
 # ============================================================
 # GLOBAL EXCEPTION HANDLER - NEVER LET APP CRASH

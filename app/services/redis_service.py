@@ -78,12 +78,12 @@ class RedisService:
             # Log success
             parsed = urlparse(connection_string)
             logger.info(
-                f"✓ Redis connected to {parsed.hostname}:{parsed.port} "
+                f"Redis connected to {parsed.hostname}:{parsed.port} "
                 f"(SSL: {parsed.scheme == 'rediss'})"
             )
             
         except Exception as e:
-            logger.error(f"✗ Redis init failed: {e}")
+            logger.error(f"Redis init failed: {e}")
             raise
 
     def _get_healthy_client(self) -> Redis:
