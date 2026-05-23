@@ -128,9 +128,6 @@ app.mount(
 
 
 
-
-
-
 # ============================================================
 # GLOBAL EXCEPTION HANDLER - NEVER LET APP CRASH
 # ============================================================
@@ -158,6 +155,13 @@ async def global_exception_handler(request: Request, exc: Exception):
             "timestamp": datetime.utcnow().isoformat()
         }
     )
+
+
+# ------------------------------------------------------------------
+# CUSTOM EXCEPTION HANDLING
+# ------------------------------------------------------------------
+
+setup_exception_handlers(app, app_config)
 
 
 # ------------------------------------------------------------------ 
@@ -193,11 +197,6 @@ def custom_openapi():
 app.openapi = custom_openapi
 
 
-# ------------------------------------------------------------------
-# CUSTOM EXCEPTION HANDLING
-# ------------------------------------------------------------------
-
-setup_exception_handlers(app, app_config)
 
 # ------------------------------------------------------------------
 # MIDDLEWARE

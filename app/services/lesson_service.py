@@ -159,7 +159,7 @@ def create_lesson(db: Session, data: LessonCreate, user_id: UUID) -> Lesson:
     except HTTPException:
         db.rollback()
         raise
-        
+
     except IntegrityError as e:
         db.rollback()
         logger.error(f"Integrity error creating lesson: {e}")
