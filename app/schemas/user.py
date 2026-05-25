@@ -1051,7 +1051,8 @@ USERNAME_UPDATE_REGEX = re.compile(r"^[a-zA-Z0-9_]+$")
 PHONE_LOCAL_REGEX = re.compile(r"^\d{7,11}$")
 PHONE_INTL_REGEX = re.compile(r"^\+?[0-9]{10,15}$")
 
-ALLOWED_ROLES = {"student", "tutor", "parent", "admin", "super_admin"}
+# ALLOWED_ROLES = {"student", "tutor", "parent", "admin", "super_admin"}
+ALLOWED_ROLES = {"student", "tutor", "parent", "admin", "superadmin", "super_admin"}
 
 
 # ============================================================================
