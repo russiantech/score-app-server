@@ -219,16 +219,25 @@ def delete_lesson_endpoint(
     request: Request,
     lesson_id: UUID,
     db: Session = Depends(get_db),
-    current_user=Depends(tutor_required),
+    current_user = Depends(tutor_required)
 ):
-    delete_lesson(db, lesson_id)
-
-    return api_response(
-        success=True,
-        message="Lesson deleted successfully",
-        path=str(request.url.path),
-        status_code=204
-    )
+    """Delete a lesson"""
+    try:
+        delete_lesson(db, lesson_id, current_user.id)  # ← add current_user.id
+        
+        return api_response(
+            success=True,
+            message="Lesson deleted successfully",
+            path=str(request.url.path),
+            status_code=204
+        )
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to delete lesson: {str(e)}"
+        )
 
 @router.get("/module/{module_id}", response_model=List[LessonOut])
 def list_module_lessons_endpoint(
