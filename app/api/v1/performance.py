@@ -196,6 +196,7 @@ def get_student_performance(
             student_id=student_id
         )
     except Exception as e:
+        
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error fetching performance data: {str(e)}"

@@ -1,747 +1,3 @@
-# # app/services/performance_service.py
-# """
-# Student performance service - handles all performance analytics and reporting.
-# Provides comprehensive academic performance data for students.
-# """
-
-# from sqlalchemy.orm import Session
-# from sqlalchemy import func, and_
-# from uuid import UUID
-# from typing import Dict, List, Any
-# from datetime import datetime, timedelta
-
-# from app.models.enrollment import Enrollment
-# from app.models.scores import Score
-# from app.models.attendance import Attendance, AttendanceStatus
-# from app.models.modules import Module
-# from app.models.lesson import Lesson
-# from fastapi import HTTPException, status
-
-
-# def get_student_performance(db: Session, student_id: UUID) -> Dict[str, Any]:
-#     """
-#     Get comprehensive performance data for a student across all enrolled courses.
-    
-#     Returns:
-#         {
-#             "summary": {...},
-#             "courses": [...],
-#             "attendance": {...},
-#             "trends": {...}
-#         }
-#     """
-#     # Get all enrollments
-#     enrollments = db.query(Enrollment).filter(
-#         Enrollment.student_id == student_id
-#     ).all()
-    
-#     if not enrollments:
-#         return {
-#             "summary": _get_empty_summary(),
-#             "courses": [],
-#             "attendance": _get_empty_attendance(),
-#             "trends": []
-#         }
-    
-#     # Build course performance data
-#     courses_performance = []
-#     for enrollment in enrollments:
-#         course_data = _get_course_performance(db, enrollment)
-#         if course_data:
-#             courses_performance.append(course_data)
-    
-#     # Calculate overall summary
-#     summary = _calculate_overall_summary(courses_performance)
-    
-#     # Get attendance summary
-#     attendance = _get_attendance_summary(db, student_id)
-    
-#     # Get performance trends
-#     trends = _get_performance_trends(db, student_id)
-    
-#     return {
-#         "summary": summary,
-#         "courses": courses_performance,
-#         "attendance": attendance,
-#         "trends": trends
-#     }
-
-
-# def get_course_performance(
-#     db: Session, 
-#     student_id: UUID, 
-#     course_id: UUID
-# ) -> Dict[str, Any]:
-#     """Get detailed performance for a specific course."""
-#     enrollment = db.query(Enrollment).filter(
-#         and_(
-#             Enrollment.student_id == student_id,
-#             Enrollment.course_id == course_id
-#         )
-#     ).first()
-    
-#     if not enrollment:
-#         raise HTTPException(
-#             status_code=status.HTTP_404_NOT_FOUND,
-#             detail="Enrollment not found"
-#         )
-    
-#     return _get_course_performance(db, enrollment)
-
-
-# def export_performance_report(
-#     db: Session,
-#     student_id: UUID,
-#     format: str = 'pdf'
-# ) -> bytes:
-#     """
-#     Generate exportable performance report.
-    
-#     Args:
-#         format: 'pdf' or 'excel'
-    
-#     Returns:
-#         Binary data of the report
-#     """
-#     performance = get_student_performance(db, student_id)
-    
-#     if format == 'pdf':
-#         return _generate_pdf_report(performance)
-#     elif format == 'excel':
-#         return _generate_excel_report(performance)
-#     else:
-#         raise HTTPException(
-#             status_code=status.HTTP_400_BAD_REQUEST,
-#             detail="Invalid format. Use 'pdf' or 'excel'"
-#         )
-
-
-# # ============================================================================
-# # PRIVATE HELPER FUNCTIONS
-# # ============================================================================
-
-# def _get_course_performance(db: Session, enrollment: Enrollment) -> Dict[str, Any]:
-#     """Calculate performance metrics for a single course."""
-#     course = enrollment.course
-    
-#     # Get all scores for this enrollment
-#     scores = db.query(Score).filter(
-#         Score.enrollment_id == enrollment.id
-#     ).all()
-    
-#     # Categorize scores
-#     lesson_scores = []
-#     module_scores = []
-#     course_scores = []
-    
-#     for score in scores:
-#         score_data = {
-#             "id": str(score.id),
-#             "type": score.type.value,
-#             "title": _get_score_title(db, score),
-#             "score": float(score.score),
-#             "max_score": float(score.max_score),
-#             "percentage": round((score.score / score.max_score * 100), 1) if score.max_score > 0 else 0,
-#             "grade": _calculate_grade(score.score, score.max_score),
-#             "recorded_date": score.created_at.isoformat() if score.created_at else None,
-#             "feedback": score.notes
-#         }
-        
-#         if score.lesson_id:
-#             lesson_scores.append(score_data)
-#         elif score.module_id:
-#             module_scores.append(score_data)
-#         elif score.enrollment.course_id:
-#             course_scores.append(score_data)
-    
-#     # Calculate overall average
-#     total_scores = lesson_scores + module_scores + course_scores
-#     overall_average = 0
-#     if total_scores:
-#         overall_average = round(
-#             sum(s['percentage'] for s in total_scores) / len(total_scores),
-#             1
-#         )
-    
-#     return {
-#         "enrollment_id": str(enrollment.id),
-#         "course": {
-#             "id": str(course.id),
-#             "title": course.title,
-#             "code": course.code
-#         },
-#         "lesson_scores": lesson_scores,
-#         "module_scores": module_scores,
-#         "course_scores": course_scores,
-#         "total_assessments": len(total_scores),
-#         "overall_average": overall_average,
-#         "overall_grade": _calculate_grade_from_percentage(overall_average),
-#         "enrolled_date": enrollment.enrolled_at.isoformat() if enrollment.enrolled_at else None
-#     }
-
-
-# def _get_score_title(db: Session, score: Score) -> str:
-#     """Get human-readable title for a score."""
-#     if score.lesson_id:
-#         lesson = db.query(Lesson).filter(Lesson.id == score.lesson_id).first()
-#         return f"{lesson.title} - {score.type.value}" if lesson else score.type.value
-#     elif score.module_id:
-#         module = db.query(Module).filter(Module.id == score.module_id).first()
-#         return f"{module.title} - Exam" if module else "Module Exam"
-#     elif score.enrollment.course_id:
-#         return f"Course Project - {score.type.value}"
-#     return "Unknown"
-
-
-# def _calculate_grade(score: float, max_score: float) -> str:
-#     """Calculate letter grade from score."""
-#     if max_score == 0:
-#         return "N/A"
-    
-#     percentage = (score / max_score) * 100
-#     return _calculate_grade_from_percentage(percentage)
-
-
-# def _calculate_grade_from_percentage(percentage: float) -> str:
-#     """Convert percentage to letter grade."""
-#     if percentage >= 90:
-#         return "A"
-#     elif percentage >= 80:
-#         return "B"
-#     elif percentage >= 70:
-#         return "C"
-#     elif percentage >= 60:
-#         return "D"
-#     else:
-#         return "F"
-
-
-# def _calculate_overall_summary(courses: List[Dict]) -> Dict[str, Any]:
-#     """Calculate overall summary across all courses."""
-#     if not courses:
-#         return _get_empty_summary()
-    
-#     total_courses = len(courses)
-#     total_assessments = sum(c['total_assessments'] for c in courses)
-#     overall_average = round(
-#         sum(c['overall_average'] for c in courses) / total_courses,
-#         1
-#     ) if total_courses > 0 else 0
-    
-#     # Grade distribution
-#     grades = [c['overall_grade'] for c in courses]
-#     grade_distribution = {
-#         "A": grades.count("A"),
-#         "B": grades.count("B"),
-#         "C": grades.count("C"),
-#         "D": grades.count("D"),
-#         "F": grades.count("F")
-#     }
-    
-#     return {
-#         "total_courses": total_courses,
-#         "total_assessments": total_assessments,
-#         "overall_average": overall_average,
-#         "overall_grade": _calculate_grade_from_percentage(overall_average),
-#         "grade_distribution": grade_distribution
-#     }
-
-
-# def _get_attendance_summary(db: Session, student_id: UUID) -> Dict[str, Any]:
-#     """Get attendance summary for student."""
-#     # Count total attendance records
-#     total = db.query(func.count(Attendance.id)).filter(
-#         Attendance.student_id == student_id
-#     ).scalar() or 0
-    
-#     # Count present
-#     present = db.query(func.count(Attendance.id)).filter(
-#         and_(
-#             Attendance.student_id == student_id,
-#             Attendance.status == AttendanceStatus.PRESENT
-#         )
-#     ).scalar() or 0
-    
-#     # Count absent
-#     absent = db.query(func.count(Attendance.id)).filter(
-#         and_(
-#             Attendance.student_id == student_id,
-#             Attendance.status == AttendanceStatus.ABSENT
-#         )
-#     ).scalar() or 0
-    
-#     # Count late
-#     late = db.query(func.count(Attendance.id)).filter(
-#         and_(
-#             Attendance.student_id == student_id,
-#             Attendance.status == AttendanceStatus.LATE
-#         )
-#     ).scalar() or 0
-    
-#     attendance_rate = round((present / total * 100), 1) if total > 0 else 0
-    
-#     return {
-#         "total": total,
-#         "present": present,
-#         "absent": absent,
-#         "late": late,
-#         "attendance_rate": attendance_rate
-#     }
-
-
-# def _get_performance_trends(db: Session, student_id: UUID) -> List[Dict]:
-#     """Get performance trends over time."""
-#     # Get scores from last 6 months grouped by month
-#     six_months_ago = datetime.utcnow() - timedelta(days=180)
-    
-#     scores = db.query(
-#         func.date_trunc('month', Score.created_at).label('month'),
-#         func.avg(Score.score / Score.max_score * 100).label('avg_percentage')
-#     ).filter(
-#         and_(
-#             Score.student_id == student_id,
-#             Score.created_at >= six_months_ago
-#         )
-#     ).group_by(
-#         func.date_trunc('month', Score.created_at)
-#     ).order_by(
-#         func.date_trunc('month', Score.created_at)
-#     ).all()
-    
-#     return [
-#         {
-#             "month": score.month.strftime("%B %Y"),
-#             "average": round(score.avg_percentage, 1)
-#         }
-#         for score in scores
-#     ]
-
-
-# def _get_empty_summary() -> Dict[str, Any]:
-#     """Return empty summary structure."""
-#     return {
-#         "total_courses": 0,
-#         "total_assessments": 0,
-#         "overall_average": 0,
-#         "overall_grade": "N/A",
-#         "grade_distribution": {"A": 0, "B": 0, "C": 0, "D": 0, "F": 0}
-#     }
-
-
-# def _get_empty_attendance() -> Dict[str, Any]:
-#     """Return empty attendance structure."""
-#     return {
-#         "total": 0,
-#         "present": 0,
-#         "absent": 0,
-#         "late": 0,
-#         "attendance_rate": 0
-#     }
-
-
-# def _generate_pdf_report(performance: Dict) -> bytes:
-#     """
-#     Generate PDF report.
-#     TODO: Implement using ReportLab or WeasyPrint
-#     """
-#     # Placeholder - implement with actual PDF library
-#     raise HTTPException(
-#         status_code=status.HTTP_501_NOT_IMPLEMENTED,
-#         detail="PDF generation not yet implemented"
-#     )
-
-
-# def _generate_excel_report(performance: Dict) -> bytes:
-#     """
-#     Generate Excel report.
-#     TODO: Implement using openpyxl or xlsxwriter
-#     """
-#     # Placeholder - implement with actual Excel library
-#     raise HTTPException(
-#         status_code=status.HTTP_501_NOT_IMPLEMENTED,
-#         detail="Excel generation not yet implemented"
-#     )
-
-
-
-# # v2
-# # app/services/performance_service.py
-# """
-# Student performance service - handles all performance analytics and reporting.
-# Provides comprehensive academic performance data for students.
-# """
-
-# from sqlalchemy.orm import Session, joinedload
-# from sqlalchemy import func, and_
-# from uuid import UUID
-# from typing import Dict, List, Any
-# from datetime import datetime, timedelta
-
-# from app.models.enrollment import Enrollment
-# from app.models.scores import Score, ScoreColumn
-# from app.models.attendance import Attendance, AttendanceStatus
-# from app.models.modules import Module
-# from app.models.lesson import Lesson
-# from fastapi import HTTPException, status
-
-
-# def get_student_performance(db: Session, student_id: UUID) -> Dict[str, Any]:
-#     """
-#     Get comprehensive performance data for a student across all enrolled courses.
-    
-#     Returns:
-#         {
-#             "summary": {...},
-#             "courses": [...],
-#             "attendance": {...},
-#             "trends": {...}
-#         }
-#     """
-#     # Get all enrollments
-#     enrollments = db.query(Enrollment).filter(
-#         Enrollment.student_id == student_id
-#     ).all()
-    
-#     if not enrollments:
-#         return {
-#             "summary": _get_empty_summary(),
-#             "courses": [],
-#             "attendance": _get_empty_attendance(),
-#             "trends": []
-#         }
-    
-#     # Build course performance data
-#     courses_performance = []
-#     for enrollment in enrollments:
-#         course_data = _get_course_performance(db, enrollment)
-#         if course_data:
-#             courses_performance.append(course_data)
-    
-#     # Calculate overall summary
-#     summary = _calculate_overall_summary(courses_performance)
-    
-#     # Get attendance summary
-#     attendance = _get_attendance_summary(db, student_id)
-    
-#     # Get performance trends
-#     trends = _get_performance_trends(db, student_id, enrollments)
-    
-#     return {
-#         "summary": summary,
-#         "courses": courses_performance,
-#         "attendance": attendance,
-#         "trends": trends
-#     }
-
-
-# def get_course_performance(
-#     db: Session, 
-#     student_id: UUID, 
-#     course_id: UUID
-# ) -> Dict[str, Any]:
-#     """Get detailed performance for a specific course."""
-#     enrollment = db.query(Enrollment).filter(
-#         and_(
-#             Enrollment.student_id == student_id,
-#             Enrollment.course_id == course_id
-#         )
-#     ).first()
-    
-#     if not enrollment:
-#         raise HTTPException(
-#             status_code=status.HTTP_404_NOT_FOUND,
-#             detail="Enrollment not found"
-#         )
-    
-#     return _get_course_performance(db, enrollment)
-
-
-# def export_performance_report(
-#     db: Session,
-#     student_id: UUID,
-#     format: str = 'pdf'
-# ) -> bytes:
-#     """
-#     Generate exportable performance report.
-    
-#     Args:
-#         format: 'pdf' or 'excel'
-    
-#     Returns:
-#         Binary data of the report
-#     """
-#     performance = get_student_performance(db, student_id)
-    
-#     if format == 'pdf':
-#         return _generate_pdf_report(performance)
-#     elif format == 'excel':
-#         return _generate_excel_report(performance)
-#     else:
-#         raise HTTPException(
-#             status_code=status.HTTP_400_BAD_REQUEST,
-#             detail="Invalid format. Use 'pdf' or 'excel'"
-#         )
-
-
-# # ============================================================================
-# # PRIVATE HELPER FUNCTIONS
-# # ============================================================================
-
-# def _get_course_performance(db: Session, enrollment: Enrollment) -> Dict[str, Any]:
-#     """Calculate performance metrics for a single course."""
-#     course = enrollment.course
-    
-#     # Get all scores for this enrollment
-#     scores = db.query(Score).options(
-#         joinedload(Score.column)
-#     ).filter(
-#         Score.enrollment_id == enrollment.id
-#     ).all()
-    
-#     # Categorize scores by scope
-#     lesson_scores = []
-#     module_scores = []
-#     course_scores = []
-    
-#     for score in scores:
-#         column = score.column
-        
-#         score_data = {
-#             "column_id": str(score.column_id),
-#             "type": column.type.value,
-#             "title": column.title,
-#             "score": float(score.score),
-#             "max_score": float(score.max_score),
-#             "percentage": float(score.percentage),
-#             "grade": score.grade,
-#             "remarks": score.notes or "",
-#             "recorded_date": score.recorded_date.isoformat() if score.recorded_date else None
-#         }
-        
-#         # Add scope-specific IDs
-#         if column.lesson_id:
-#             score_data["lesson_id"] = str(column.lesson_id)
-#             lesson_scores.append(score_data)
-#         elif column.module_id:
-#             score_data["module_id"] = str(column.module_id)
-#             module_scores.append(score_data)
-#         elif column.course_id:
-#             score_data["course_id"] = str(column.course_id)
-#             course_scores.append(score_data)
-    
-#     # Calculate overall average
-#     total_scores = lesson_scores + module_scores + course_scores
-#     overall_average = 0.0
-#     if total_scores:
-#         overall_average = round(
-#             sum(s['percentage'] for s in total_scores) / len(total_scores),
-#             1
-#         )
-    
-#     return {
-#         "enrollment_id": str(enrollment.id),
-#         "course": {
-#             "id": str(course.id),
-#             "title": course.title,
-#             "code": course.code
-#         },
-#         "lesson_scores": lesson_scores,
-#         "module_scores": module_scores,
-#         "course_scores": course_scores,
-#         "total_assessments": len(total_scores),
-#         "overall_average": overall_average,
-#         "overall_grade": _calculate_grade_from_percentage(overall_average),
-#         "enrolled_date": enrollment.enrolled_at.isoformat() if enrollment.enrolled_at else None
-#     }
-
-
-# def _calculate_grade_from_percentage(percentage: float) -> str:
-#     """Convert percentage to letter grade."""
-#     if percentage >= 90:
-#         return "A+"
-#     elif percentage >= 80:
-#         return "A"
-#     elif percentage >= 75:
-#         return "B+"
-#     elif percentage >= 70:
-#         return "B"
-#     elif percentage >= 65:
-#         return "C+"
-#     elif percentage >= 60:
-#         return "C"
-#     elif percentage >= 55:
-#         return "D+"
-#     elif percentage >= 50:
-#         return "D"
-#     else:
-#         return "F"
-
-
-# def _calculate_overall_summary(courses: List[Dict]) -> Dict[str, Any]:
-#     """Calculate overall summary across all courses."""
-#     if not courses:
-#         return _get_empty_summary()
-    
-#     total_courses = len(courses)
-#     total_assessments = sum(c['total_assessments'] for c in courses)
-#     overall_average = round(
-#         sum(c['overall_average'] for c in courses) / total_courses,
-#         1
-#     ) if total_courses > 0 else 0.0
-    
-#     # Grade distribution
-#     grades = [c['overall_grade'] for c in courses]
-#     grade_distribution = {
-#         "A+": grades.count("A+"),
-#         "A": grades.count("A"),
-#         "B+": grades.count("B+"),
-#         "B": grades.count("B"),
-#         "C+": grades.count("C+"),
-#         "C": grades.count("C"),
-#         "D+": grades.count("D+"),
-#         "D": grades.count("D"),
-#         "F": grades.count("F")
-#     }
-    
-#     return {
-#         "total_courses": total_courses,
-#         "total_assessments": total_assessments,
-#         "overall_average": overall_average,
-#         "overall_grade": _calculate_grade_from_percentage(overall_average),
-#         "grade_distribution": grade_distribution
-#     }
-
-
-# def _get_attendance_summary(db: Session, student_id: UUID) -> Dict[str, Any]:
-#     """Get attendance summary for student."""
-#     # Count total attendance records
-#     total = db.query(func.count(Attendance.id)).filter(
-#         Attendance.student_id == student_id
-#     ).scalar() or 0
-    
-#     # Count present
-#     present = db.query(func.count(Attendance.id)).filter(
-#         and_(
-#             Attendance.student_id == student_id,
-#             Attendance.status == AttendanceStatus.PRESENT
-#         )
-#     ).scalar() or 0
-    
-#     # Count absent
-#     absent = db.query(func.count(Attendance.id)).filter(
-#         and_(
-#             Attendance.student_id == student_id,
-#             Attendance.status == AttendanceStatus.ABSENT
-#         )
-#     ).scalar() or 0
-    
-#     # Count late
-#     late = db.query(func.count(Attendance.id)).filter(
-#         and_(
-#             Attendance.student_id == student_id,
-#             Attendance.status == AttendanceStatus.LATE
-#         )
-#     ).scalar() or 0
-    
-#     attendance_rate = round((present / total * 100), 1) if total > 0 else 0.0
-    
-#     return {
-#         "total": total,
-#         "present": present,
-#         "absent": absent,
-#         "late": late,
-#         "attendance_rate": attendance_rate
-#     }
-
-
-# def _get_performance_trends(
-#     db: Session, 
-#     student_id: UUID,
-#     enrollments: List[Enrollment]
-# ) -> List[Dict]:
-#     """Get performance trends over time."""
-#     # Get enrollment IDs
-#     enrollment_ids = [e.id for e in enrollments]
-    
-#     if not enrollment_ids:
-#         return []
-    
-#     # Get scores from last 6 months grouped by month
-#     six_months_ago = datetime.utcnow() - timedelta(days=180)
-    
-#     scores = db.query(
-#         func.date_trunc('month', Score.recorded_date).label('month'),
-#         func.avg(Score.percentage).label('avg_percentage')
-#     ).filter(
-#         and_(
-#             Score.enrollment_id.in_(enrollment_ids),
-#             Score.recorded_date >= six_months_ago,
-#             Score.recorded_date.isnot(None)
-#         )
-#     ).group_by(
-#         func.date_trunc('month', Score.recorded_date)
-#     ).order_by(
-#         func.date_trunc('month', Score.recorded_date)
-#     ).all()
-    
-#     return [
-#         {
-#             "month": score.month.strftime("%B %Y") if score.month else "Unknown",
-#             "average": round(score.avg_percentage, 1) if score.avg_percentage else 0
-#         }
-#         for score in scores
-#     ]
-
-
-# def _get_empty_summary() -> Dict[str, Any]:
-#     """Return empty summary structure."""
-#     return {
-#         "total_courses": 0,
-#         "total_assessments": 0,
-#         "overall_average": 0.0,
-#         "overall_grade": "N/A",
-#         "grade_distribution": {
-#             "A+": 0, "A": 0, "B+": 0, "B": 0, 
-#             "C+": 0, "C": 0, "D+": 0, "D": 0, "F": 0
-#         }
-#     }
-
-
-# def _get_empty_attendance() -> Dict[str, Any]:
-#     """Return empty attendance structure."""
-#     return {
-#         "total": 0,
-#         "present": 0,
-#         "absent": 0,
-#         "late": 0,
-#         "attendance_rate": 0.0
-#     }
-
-
-# def _generate_pdf_report(performance: Dict) -> bytes:
-#     """
-#     Generate PDF report.
-#     TODO: Implement using ReportLab or WeasyPrint
-#     """
-#     # Placeholder - implement with actual PDF library
-#     raise HTTPException(
-#         status_code=status.HTTP_501_NOT_IMPLEMENTED,
-#         detail="PDF generation not yet implemented"
-#     )
-
-
-# def _generate_excel_report(performance: Dict) -> bytes:
-#     """
-#     Generate Excel report.
-#     TODO: Implement using openpyxl or xlsxwriter
-#     """
-#     # Placeholder - implement with actual Excel library
-#     raise HTTPException(
-#         status_code=status.HTTP_501_NOT_IMPLEMENTED,
-#         detail="Excel generation not yet implemented"
-#     )
-
-
 
 # v3 - with .pdf and excel full implimentations
 """
@@ -756,12 +12,14 @@ from typing import Dict, List, Any, Optional
 from datetime import datetime, timedelta
 from io import BytesIO
 
+from sqlalchemy import func, and_, desc, or_
 from app.models.enrollment import Enrollment
 from app.models.scores import Score, ScoreColumn
 from app.models.attendance import Attendance, AttendanceStatus
 from app.models.modules import Module
 from app.models.lesson import Lesson
 from app.models.course import Course
+from app.models.user import User
 from fastapi import HTTPException, status
 
 # PDF Generation
@@ -845,71 +103,351 @@ def get_student_performance(db: Session, student_id: UUID) -> Dict[str, Any]:
     }
 
 
+# def _get_course_performance(db: Session, enrollment: Enrollment) -> Dict[str, Any]:
+#     """Calculate performance metrics for a single course with full assessment details."""
+#     course = enrollment.course
+    
+#     # Get all scores with full details
+#     scores = db.query(Score).options(
+#         joinedload(Score.column)
+#     ).filter(
+#         Score.enrollment_id == enrollment.id
+#     ).all()
+    
+#     # Categorize scores by scope with full titles
+#     lesson_scores = []
+#     module_scores = []
+#     course_scores = []
+    
+#     for score in scores:
+#         column = score.column
+        
+#         # Resolve scope title, lesson date, and scope ordering key
+#         scope_title = None
+#         lesson_date = None
+#         scope_order = None  # for sorting within grouped view
+        
+#         if column.lesson_id:
+#             lesson = db.query(Lesson).filter(Lesson.id == column.lesson_id).first()
+#             scope_title = lesson.title if lesson else "Unknown Lesson"
+#             # Expose the lesson's scheduled/actual date if the model carries one
+#             if lesson and hasattr(lesson, 'date') and lesson.date:
+#                 lesson_date = lesson.date.isoformat()
+#             elif lesson and hasattr(lesson, 'date') and lesson.date:
+#                 lesson_date = lesson.date.isoformat()
+#             if lesson and hasattr(lesson, 'order'):
+#                 scope_order = lesson.order
+#         elif column.module_id:
+#             module = db.query(Module).filter(Module.id == column.module_id).first()
+#             scope_title = module.title if module else "Unknown Module"
+#             if module and hasattr(module, 'order'):
+#                 scope_order = module.order
+#         elif column.course_id:
+#             scope_title = course.title
+
+#         # Resolve who recorded the score (teacher/staff name if available)
+#         recorded_by = None
+#         if hasattr(score, 'recorded_by_user') and score.recorded_by_user:
+#             recorded_by = score.recorded_by_user.names or score.recorded_by_user.email
+#         elif hasattr(score, 'recorded_by') and score.recorded_by:
+#             # If it's a FK id rather than a relationship, skip — avoid extra query cost.
+#             pass
+
+#         score_data = {
+#             "column_id": str(score.column_id),
+#             "type": column.type.value,
+#             "title": column.title,          # Assessment title (e.g., "Homework 1", "Quiz 2")
+#             "scope_title": scope_title,     # Lesson / Module / Course title
+#             "scope_order": scope_order,     # Ordering within its parent (for FE grouping)
+#             "lesson_date": lesson_date,     # Scheduled/actual lesson date (if available)
+#             "score": float(score.score) if score.score is not None else None,
+#             "max_score": float(score.max_score),
+#             "percentage": float(score.percentage) if score.percentage is not None else None,
+#             "grade": score.grade if score.grade else "N/A",
+#             "remarks": score.notes or "",
+#             "recorded_date": score.recorded_date.isoformat() if score.recorded_date else None,
+#             "recorded_by": recorded_by,     # Name/email of staff who recorded the score
+#             "is_completed": score.score is not None,
+#         }
+        
+#         if column.lesson_id:
+#             score_data["lesson_id"] = str(column.lesson_id)
+#             lesson_scores.append(score_data)
+#         elif column.module_id:
+#             score_data["module_id"] = str(column.module_id)
+#             module_scores.append(score_data)
+#         elif column.course_id:
+#             score_data["course_id"] = str(column.course_id)
+#             course_scores.append(score_data)
+    
+#     # Calculate metrics
+#     total_scores = lesson_scores + module_scores + course_scores
+#     completed_scores = [s for s in total_scores if s['is_completed']]
+    
+#     overall_average = 0.0
+#     if completed_scores:
+#         overall_average = round(
+#             sum(s['percentage'] for s in completed_scores if s['percentage'] is not None) / len(completed_scores),
+#             1
+#         )
+    
+#     return {
+#         "enrollment_id": str(enrollment.id),
+#         "course": {
+#             "id": str(course.id),
+#             "title": course.title,
+#             "code": course.code
+#         },
+#         "lesson_scores": lesson_scores,
+#         "module_scores": module_scores,
+#         "course_scores": course_scores,
+#         "total_assessments": len(total_scores),
+#         "completed_assessments": len(completed_scores),
+#         "overall_average": overall_average,
+#         "overall_grade": _calculate_grade_from_percentage(overall_average),
+#         "enrolled_date": enrollment.enrolled_at.isoformat() if enrollment.enrolled_at else None
+#     }
+
+
+# v2
 def _get_course_performance(db: Session, enrollment: Enrollment) -> Dict[str, Any]:
     """Calculate performance metrics for a single course with full assessment details."""
     course = enrollment.course
-    
-    # Get all scores with full details
-    scores = db.query(Score).options(
-        joinedload(Score.column)
-    ).filter(
-        Score.enrollment_id == enrollment.id
+
+    # ========================================================================
+    # STEP 1: Get all modules and lessons for this course (ensures ALL show)
+    # ========================================================================
+    modules = db.query(Module).filter(
+        Module.course_id == course.id
+    ).order_by(
+        Module.order if hasattr(Module, 'order') else Module.id
     ).all()
-    
-    # Categorize scores by scope with full titles
+
+    # ========================================================================
+    # STEP 2: Get all score columns and scores for this enrollment
+    # ========================================================================
+    score_columns = db.query(ScoreColumn).outerjoin(
+        Score,
+        and_(Score.column_id == ScoreColumn.id, Score.enrollment_id == enrollment.id)
+    ).options(
+        joinedload(ScoreColumn.scores)
+    ).filter(
+        or_(
+            ScoreColumn.course_id == course.id,
+            ScoreColumn.module_id.in_([m.id for m in modules]),
+            ScoreColumn.lesson_id.in_(
+                db.query(Lesson.id).filter(Lesson.module_id.in_([m.id for m in modules]))
+            )
+        )
+    ).all()
+
+    # Build lookup: column_id -> score for this enrollment
+    score_lookup: Dict[str, Any] = {}
+    for col in score_columns:
+        for s in col.scores:
+            if s.enrollment_id == enrollment.id:
+                score_lookup[str(col.id)] = s
+                break
+
+    # ========================================================================
+    # STEP 3: Build lesson_scores - ALL lessons included, with their assessments
+    # ========================================================================
     lesson_scores = []
     module_scores = []
     course_scores = []
-    
-    for score in scores:
-        column = score.column
-        
-        # Get the actual lesson/module/course title
-        scope_title = None
-        if column.lesson_id:
-            lesson = db.query(Lesson).filter(Lesson.id == column.lesson_id).first()
-            scope_title = lesson.title if lesson else "Unknown Lesson"
-        elif column.module_id:
+
+    # Process each module and its lessons
+    for module in modules:
+        module_lessons = db.query(Lesson).filter(
+            Lesson.module_id == module.id
+        ).order_by(
+            Lesson.order if hasattr(Lesson, 'order') else Lesson.id
+        ).all()
+
+        for lesson in module_lessons:
+            # Find all ScoreColumns for this lesson
+            lesson_columns = [col for col in score_columns if col.lesson_id == lesson.id]
+
+            # Get lesson date
+            lesson_date = None
+            if hasattr(lesson, 'date') and lesson.date:
+                lesson_date = lesson.date.isoformat()
+            elif hasattr(lesson, 'scheduled_date') and lesson.scheduled_date:
+                lesson_date = lesson.scheduled_date.isoformat()
+
+            # Get module order for sorting
+            module_order = None
+            if hasattr(module, 'order'):
+                module_order = module.order
+
+            # Get lesson order for sorting
+            lesson_order = None
+            if hasattr(lesson, 'order'):
+                lesson_order = lesson.order
+
+            if lesson_columns:
+                # Lesson has assessment columns - emit one score_data per column
+                for column in lesson_columns:
+                    score = score_lookup.get(str(column.id))
+
+                    # Get recorded_by info
+                    recorded_by = None
+                    recorded_date = None
+                    if score:
+                        if score.recorded_date:
+                            recorded_date = score.recorded_date.isoformat()
+                        if hasattr(score, 'recorded_by') and score.recorded_by:
+                            recorded_by = score.recorded_by.names or score.recorded_by.email or "Unknown"
+                        elif hasattr(score, 'grader') and score.grader:
+                            recorded_by = score.grader.names or score.grader.email or "Unknown"
+                        elif hasattr(score, 'recorded_by_id') and score.recorded_by_id:
+                            grader = db.query(User).filter(User.id == score.recorded_by_id).first()
+                            recorded_by = grader.names if grader and grader.names else (grader.email if grader else "Unknown")
+                        elif hasattr(score, 'grader_id') and score.grader_id:
+                            grader = db.query(User).filter(User.id == score.grader_id).first()
+                            recorded_by = grader.names if grader and grader.names else (grader.email if grader else "Unknown")
+
+                    score_data = {
+                        "column_id": str(column.id),
+                        "type": column.type.value if column.type else "unknown",
+                        "title": column.title or "Untitled Assessment",
+                        "scope_title": lesson.title,
+                        "module_name": module.title,
+                        "module_order": module_order,
+                        "lesson_order": lesson_order,
+                        "score": float(score.score) if score and score.score is not None else None,
+                        "max_score": float(column.max_score) if column.max_score else (float(score.max_score) if score and score.max_score else 0),
+                        "percentage": float(score.percentage) if score and score.percentage is not None else None,
+                        "grade": score.grade if score and score.grade else "N/A",
+                        "remarks": (score.notes if score and score.notes else "") or column.description or "",
+                        "recorded_date": recorded_date,
+                        "recorded_by": recorded_by,
+                        "lesson_date": lesson_date,
+                        "is_completed": score is not None and score.score is not None
+                    }
+                    lesson_scores.append(score_data)
+            else:
+                # Lesson has NO assessment columns - emit a placeholder row
+                # so the lesson still appears in the table
+                placeholder = {
+                    "column_id": f"placeholder-{lesson.id}",
+                    "type": "none",
+                    "title": "No assessments",
+                    "scope_title": lesson.title,
+                    "module_name": module.title,
+                    "module_order": module_order,
+                    "lesson_order": lesson_order,
+                    "score": None,
+                    "max_score": 0,
+                    "percentage": None,
+                    "grade": "N/A",
+                    "remarks": "",
+                    "recorded_date": None,
+                    "recorded_by": None,
+                    "lesson_date": lesson_date,
+                    "is_completed": False
+                }
+                lesson_scores.append(placeholder)
+
+    # ========================================================================
+    # STEP 4: Process module-level and course-level assessments (unchanged logic)
+    # ========================================================================
+    for column in score_columns:
+        if column.module_id and not column.lesson_id:
+            score = score_lookup.get(str(column.id))
             module = db.query(Module).filter(Module.id == column.module_id).first()
-            scope_title = module.title if module else "Unknown Module"
-        elif column.course_id:
-            scope_title = course.title
-        
-        score_data = {
-            "column_id": str(score.column_id),
-            "type": column.type.value,
-            "title": column.title,  # Assessment title (e.g., "Homework 1", "Quiz 2")
-            "scope_title": scope_title,  # Lesson/Module/Course title
-            "score": float(score.score) if score.score is not None else None,
-            "max_score": float(score.max_score),
-            "percentage": float(score.percentage) if score.percentage is not None else None,
-            "grade": score.grade if score.grade else "N/A",
-            "remarks": score.notes or "",
-            "recorded_date": score.recorded_date.isoformat() if score.recorded_date else None,
-            "is_completed": score.score is not None
-        }
-        
-        if column.lesson_id:
-            score_data["lesson_id"] = str(column.lesson_id)
-            lesson_scores.append(score_data)
-        elif column.module_id:
-            score_data["module_id"] = str(column.module_id)
+
+            recorded_by = None
+            recorded_date = None
+            if score:
+                if score.recorded_date:
+                    recorded_date = score.recorded_date.isoformat()
+                if hasattr(score, 'recorded_by') and score.recorded_by:
+                    recorded_by = score.recorded_by.names or score.recorded_by.email or "Unknown"
+                elif hasattr(score, 'grader') and score.grader:
+                    recorded_by = score.grader.names or score.grader.email or "Unknown"
+                elif hasattr(score, 'recorded_by_id') and score.recorded_by_id:
+                    grader = db.query(User).filter(User.id == score.recorded_by_id).first()
+                    recorded_by = grader.names if grader and grader.names else (grader.email if grader else "Unknown")
+                elif hasattr(score, 'grader_id') and score.grader_id:
+                    grader = db.query(User).filter(User.id == score.grader_id).first()
+                    recorded_by = grader.names if grader and grader.names else (grader.email if grader else "Unknown")
+
+            score_data = {
+                "column_id": str(column.id),
+                "type": column.type.value if column.type else "unknown",
+                "title": column.title or "Untitled Assessment",
+                "scope_title": module.title if module else "Unknown Module",
+                "module_name": module.title if module else "Unknown",
+                "module_order": module.order if module and hasattr(module, 'order') else None,
+                "lesson_order": None,
+                "score": float(score.score) if score and score.score is not None else None,
+                "max_score": float(column.max_score) if column.max_score else (float(score.max_score) if score and score.max_score else 0),
+                "percentage": float(score.percentage) if score and score.percentage is not None else None,
+                "grade": score.grade if score and score.grade else "N/A",
+                "remarks": (score.notes if score and score.notes else "") or column.description or "",
+                "recorded_date": recorded_date,
+                "recorded_by": recorded_by,
+                "lesson_date": None,
+                "is_completed": score is not None and score.score is not None
+            }
             module_scores.append(score_data)
-        elif column.course_id:
-            score_data["course_id"] = str(column.course_id)
+
+        elif column.course_id and not column.module_id and not column.lesson_id:
+            score = score_lookup.get(str(column.id))
+
+            recorded_by = None
+            recorded_date = None
+            if score:
+                if score.recorded_date:
+                    recorded_date = score.recorded_date.isoformat()
+                if hasattr(score, 'recorded_by') and score.recorded_by:
+                    recorded_by = score.recorded_by.names or score.recorded_by.email or "Unknown"
+                elif hasattr(score, 'grader') and score.grader:
+                    recorded_by = score.grader.names or score.grader.email or "Unknown"
+                elif hasattr(score, 'recorded_by_id') and score.recorded_by_id:
+                    grader = db.query(User).filter(User.id == score.recorded_by_id).first()
+                    recorded_by = grader.names if grader and grader.names else (grader.email if grader else "Unknown")
+                elif hasattr(score, 'grader_id') and score.grader_id:
+                    grader = db.query(User).filter(User.id == score.grader_id).first()
+                    recorded_by = grader.names if grader and grader.names else (grader.email if grader else "Unknown")
+
+            score_data = {
+                "column_id": str(column.id),
+                "type": column.type.value if column.type else "unknown",
+                "title": column.title or "Untitled Assessment",
+                "scope_title": course.title,
+                "module_name": None,
+                "module_order": None,
+                "lesson_order": None,
+                "score": float(score.score) if score and score.score is not None else None,
+                "max_score": float(column.max_score) if column.max_score else (float(score.max_score) if score and score.max_score else 0),
+                "percentage": float(score.percentage) if score and score.percentage is not None else None,
+                "grade": score.grade if score and score.grade else "N/A",
+                "remarks": (score.notes if score and score.notes else "") or column.description or "",
+                "recorded_date": recorded_date,
+                "recorded_by": recorded_by,
+                "lesson_date": None,
+                "is_completed": score is not None and score.score is not None
+            }
             course_scores.append(score_data)
-    
-    # Calculate metrics
+
+    # ========================================================================
+    # STEP 5: Sort and calculate metrics
+    # ========================================================================
+    lesson_scores.sort(key=lambda x: (x.get('module_order') or 0, x.get('lesson_order') or 0, x.get('column_id') or ''))
+    module_scores.sort(key=lambda x: x.get('module_order') or 0)
+
     total_scores = lesson_scores + module_scores + course_scores
     completed_scores = [s for s in total_scores if s['is_completed']]
-    
+
     overall_average = 0.0
     if completed_scores:
         overall_average = round(
             sum(s['percentage'] for s in completed_scores if s['percentage'] is not None) / len(completed_scores),
             1
         )
-    
+
     return {
         "enrollment_id": str(enrollment.id),
         "course": {
@@ -927,7 +465,6 @@ def _get_course_performance(db: Session, enrollment: Enrollment) -> Dict[str, An
         "enrolled_date": enrollment.enrolled_at.isoformat() if enrollment.enrolled_at else None
     }
 
-
 def _get_attendance_details(db: Session, student_id: UUID) -> List[Dict[str, Any]]:
     """Get detailed attendance records for student."""
     records = db.query(Attendance).options(
@@ -944,14 +481,30 @@ def _get_attendance_details(db: Session, student_id: UUID) -> List[Dict[str, Any
         module = lesson.module if lesson else None
         course = module.course if module else None
         
+        # Resolve lesson date (scheduled or actual)
+        lesson_date = None
+        if lesson:
+            if hasattr(lesson, "date") and lesson.date:
+                lesson_date = lesson.date.isoformat()
+            elif hasattr(lesson, "date") and lesson.date:
+                lesson_date = lesson.date.isoformat()
+
+        # Resolve who recorded this attendance entry
+        recorded_by = None
+        if hasattr(record, "created_by") and record.created_by:
+            recorded_by = record.created_by.names or record.created_by.email
+
         details.append({
+            "id": str(record.id),
             "date": record.date.isoformat(),
             "status": record.status.value,
             "lesson_title": lesson.title if lesson else "Unknown",
+            "lesson_date": lesson_date,
             "module_title": module.title if module else "Unknown",
             "course_title": course.title if course else "Unknown",
             "course_code": course.code if course else "N/A",
-            "remarks": record.notes or ""
+            "remarks": record.notes or "",
+            "recorded_by": recorded_by,
         })
     
     return details
