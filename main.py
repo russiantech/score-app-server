@@ -202,25 +202,53 @@ app.openapi = custom_openapi
 # MIDDLEWARE
 # ------------------------------------------------------------------
 
+# app.add_middleware(
+#     CORSMiddleware,
+#     allow_origins=["*"] 
+#     if app_config.general_config.development_mode
+#     else [
+#         "https://studentscores.simplylovely.ng",
+#         "https://www.studentscores.simplylovely.ng",
+#         "https://studentscores.vercel.app",
+#         "https://dunistech.ng",
+#         "https://www.dunistech.ng",
+#     ],
+    
+#     allow_credentials=True,
+#     allow_methods=["*"],
+#     allow_headers=["*"],
+# )
+
+# app.add_middleware(GZipMiddleware, minimum_size=1000)
+
+# 
+# ------------------------------------------------------------------
+# MIDDLEWARE
+# ------------------------------------------------------------------
+
+ALLOWED_ORIGINS = [
+    "https://studentscores.simplylovely.ng",
+    "https://www.studentscores.simplylovely.ng",
+    "https://studentscores.vercel.app",
+    "https://dunistech.ng",
+    "https://www.dunistech.ng",
+]
+
+if app_config.general_config.development_mode:
+    ALLOWED_ORIGINS = ["*"]
+
+logger.info("CORS development mode: %s", app_config.general_config.development_mode)
+logger.info("CORS allowed origins: %s", ALLOWED_ORIGINS)
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"] 
-    if app_config.general_config.development_mode
-    else [
-        "https://studentscores.simplylovely.ng",
-        "https://www.studentscores.simplylovely.ng",
-        "https://studentscores.vercel.app",
-        "https://dunistech.ng",
-        "https://www.dunistech.ng",
-    ],
-    
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 app.add_middleware(GZipMiddleware, minimum_size=1000)
-
 
 # ------------------------------------------------------------------
 # ROUTERS
